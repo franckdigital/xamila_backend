@@ -502,15 +502,15 @@ def collective_progress(request):
                 'id': str(account.user.id),
                 'display_name': f"Épargnant #{i}",
                 'amount': float(account.balance),
-                'is_current_user': account.user.email == "test@xamila.com",  # Pour le test
+                'is_current_user': account.user == request.user,
                 'level': min(5, max(1, int(account.balance / 100000))),  # 1 niveau par 100K FCFA
                 'progress': round(progress, 2),
                 'rank': i
             })
         
-        # Utilisateur actuel - utiliser le compte d'épargne
+        # Utilisateur actuel - utiliser l'utilisateur authentifié
         current_user_account = SavingsAccount.objects.filter(
-            user__email="test@xamila.com",
+            user=request.user,
             status='ACTIVE'
         ).first()
         
