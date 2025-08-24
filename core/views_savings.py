@@ -235,23 +235,32 @@ def savings_deposit(request):
         ).first()
         
         if not participation:
-            # Créer une participation par défaut si aucune n'existe
+            # Créer un défi par défaut s'il n'existe pas
             default_challenge = SavingsChallenge.objects.filter(
                 status='ACTIVE',
                 is_public=True
             ).first()
             
-            if default_challenge:
-                participation = ChallengeParticipation.objects.create(
-                    user=user,
-                    challenge=default_challenge,
-                    personal_target=default_challenge.target_amount,
-                    status='ACTIVE'
+            if not default_challenge:
+                # Créer un défi par défaut
+                default_challenge = SavingsChallenge.objects.create(
+                    title="Défi d'épargne général",
+                    description="Défi d'épargne pour tous les utilisateurs",
+                    challenge_type='MONTHLY',
+                    category='BEGINNER',
+                    target_amount=Decimal('50000.00'),
+                    duration_days=30,
+                    is_public=True,
+                    status='ACTIVE',
+                    created_by=user
                 )
-            else:
-                return Response({
-                    'error': 'Aucun défi d\'épargne disponible'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            participation = ChallengeParticipation.objects.create(
+                user=user,
+                challenge=default_challenge,
+                personal_target=default_challenge.target_amount,
+                status='ACTIVE'
+            )
         
         # Mapper la méthode de dépôt
         method_mapping = {
