@@ -37,6 +37,12 @@ urlpatterns = [
     # Logs d'activité
     path('logs/', views_admin.admin_activity_logs, name='admin_activity_logs'),
     
+    # ===== GESTION DES DÉFIS ÉPARGNE =====
+    
+    # Gestion des challenges épargne
+    path('challenges/', views_admin.admin_challenges, name='admin_challenges'),
+    path('challenges/<int:challenge_id>/', views_admin.admin_challenge_detail, name='admin_challenge_detail'),
+    
     # ===== FONCTIONNALITÉS AVANCÉES =====
     
     # Analytics SGI avancées

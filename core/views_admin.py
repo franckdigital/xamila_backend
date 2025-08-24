@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.pagination import PageNumberPagination
 
-from .models import User, SGI, Contract, QuizQuestion, OTP, RefreshToken
+from .models import User, SGI, Contract, QuizQuestion, OTP, RefreshToken, SavingsChallenge, ChallengeParticipation, SavingsDeposit
 from .serializers import UserSerializer
 from .permissions import IsAdminUser
 
@@ -547,3 +547,200 @@ def admin_activity_logs(request):
         'activities': all_activities[:100],  # Limiter à 100 entrées
         'total_count': len(all_activities)
     })
+
+
+# ===== GESTION DES DÉFIS ÉPARGNE =====
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAdminUser])
+def admin_challenges(request):
+    """
+    Gestion des défis épargne
+    GET /api/admin/challenges/ - Liste des défis
+    POST /api/admin/challenges/ - Créer un nouveau défi
+    """
+    if request.method == 'GET':
+        challenges = SavingsChallenge.objects.all().order_by('-created_at')
+        
+        # Filtres
+        status_filter = request.query_params.get('status', None)
+        if status_filter:
+            challenges = challenges.filter(status=status_filter)
+        
+        search = request.query_params.get('search', None)
+        if search:
+            challenges = challenges.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search)
+            )
+        
+        challenge_data = []
+        for challenge in challenges:
+            participants_count = ChallengeParticipation.objects.filter(challenge=challenge).count()
+            total_saved = SavingsDeposit.objects.filter(
+                participation__challenge=challenge
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            challenge_data.append({
+                'id': challenge.id,
+                'title': challenge.title,
+                'description': challenge.description,
+                'target_amount': float(challenge.target_amount),
+                'minimum_deposit': float(challenge.minimum_deposit),
+                'duration_months': challenge.duration_months,
+                'start_date': challenge.start_date.isoformat(),
+                'end_date': challenge.end_date.isoformat(),
+                'status': challenge.status,
+                'participants_count': participants_count,
+                'total_saved': float(total_saved),
+                'created_at': challenge.created_at.isoformat(),
+                'updated_at': challenge.updated_at.isoformat()
+            })
+        
+        return Response(challenge_data)
+    
+    elif request.method == 'POST':
+        data = request.data
+        
+        try:
+            challenge = SavingsChallenge.objects.create(
+                title=data['title'],
+                description=data['description'],
+                target_amount=data['target_amount'],
+                minimum_deposit=data['minimum_deposit'],
+                duration_months=data.get('duration_months', 6),
+                start_date=data['start_date'],
+                end_date=data['end_date'],
+                status=data.get('status', 'ACTIVE')
+            )
+            
+            participants_count = ChallengeParticipation.objects.filter(challenge=challenge).count()
+            
+            return Response({
+                'id': challenge.id,
+                'title': challenge.title,
+                'description': challenge.description,
+                'target_amount': float(challenge.target_amount),
+                'minimum_deposit': float(challenge.minimum_deposit),
+                'duration_months': challenge.duration_months,
+                'start_date': challenge.start_date.isoformat(),
+                'end_date': challenge.end_date.isoformat(),
+                'status': challenge.status,
+                'participants_count': participants_count,
+                'created_at': challenge.created_at.isoformat(),
+                'updated_at': challenge.updated_at.isoformat()
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Erreur lors de la création du défi: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAdminUser])
+def admin_challenge_detail(request, challenge_id):
+    """
+    Gestion d'un défi spécifique
+    GET /api/admin/challenges/{id}/ - Détails du défi
+    PUT /api/admin/challenges/{id}/ - Modifier le défi
+    DELETE /api/admin/challenges/{id}/ - Supprimer le défi
+    """
+    try:
+        challenge = SavingsChallenge.objects.get(id=challenge_id)
+    except SavingsChallenge.DoesNotExist:
+        return Response({
+            'error': 'Défi non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        participants_count = ChallengeParticipation.objects.filter(challenge=challenge).count()
+        total_saved = SavingsDeposit.objects.filter(
+            participation__challenge=challenge
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Participants détaillés
+        participants = ChallengeParticipation.objects.filter(
+            challenge=challenge
+        ).select_related('user')[:10]  # Limiter à 10 pour les performances
+        
+        participants_data = []
+        for participation in participants:
+            user_saved = SavingsDeposit.objects.filter(
+                participation=participation
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            participants_data.append({
+                'user_id': participation.user.id,
+                'user_name': f"{participation.user.first_name} {participation.user.last_name}",
+                'user_email': participation.user.email,
+                'total_saved': float(user_saved),
+                'progress_percentage': round((user_saved / challenge.target_amount) * 100, 2) if challenge.target_amount > 0 else 0,
+                'joined_at': participation.created_at.isoformat()
+            })
+        
+        return Response({
+            'id': challenge.id,
+            'title': challenge.title,
+            'description': challenge.description,
+            'target_amount': float(challenge.target_amount),
+            'minimum_deposit': float(challenge.minimum_deposit),
+            'duration_months': challenge.duration_months,
+            'start_date': challenge.start_date.isoformat(),
+            'end_date': challenge.end_date.isoformat(),
+            'status': challenge.status,
+            'participants_count': participants_count,
+            'total_saved': float(total_saved),
+            'progress_percentage': round((total_saved / (challenge.target_amount * participants_count)) * 100, 2) if participants_count > 0 and challenge.target_amount > 0 else 0,
+            'participants': participants_data,
+            'created_at': challenge.created_at.isoformat(),
+            'updated_at': challenge.updated_at.isoformat()
+        })
+    
+    elif request.method == 'PUT':
+        data = request.data
+        
+        try:
+            challenge.title = data.get('title', challenge.title)
+            challenge.description = data.get('description', challenge.description)
+            challenge.target_amount = data.get('target_amount', challenge.target_amount)
+            challenge.minimum_deposit = data.get('minimum_deposit', challenge.minimum_deposit)
+            challenge.duration_months = data.get('duration_months', challenge.duration_months)
+            challenge.start_date = data.get('start_date', challenge.start_date)
+            challenge.end_date = data.get('end_date', challenge.end_date)
+            challenge.status = data.get('status', challenge.status)
+            challenge.save()
+            
+            participants_count = ChallengeParticipation.objects.filter(challenge=challenge).count()
+            
+            return Response({
+                'id': challenge.id,
+                'title': challenge.title,
+                'description': challenge.description,
+                'target_amount': float(challenge.target_amount),
+                'minimum_deposit': float(challenge.minimum_deposit),
+                'duration_months': challenge.duration_months,
+                'start_date': challenge.start_date.isoformat(),
+                'end_date': challenge.end_date.isoformat(),
+                'status': challenge.status,
+                'participants_count': participants_count,
+                'updated_at': challenge.updated_at.isoformat()
+            })
+            
+        except Exception as e:
+            return Response({
+                'error': f'Erreur lors de la mise à jour: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Vérifier s'il y a des participants
+        participants_count = ChallengeParticipation.objects.filter(challenge=challenge).count()
+        if participants_count > 0:
+            return Response({
+                'error': f'Impossible de supprimer ce défi car il a {participants_count} participant(s). Désactivez-le plutôt.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        challenge.delete()
+        return Response({
+            'message': 'Défi supprimé avec succès'
+        }, status=status.HTTP_204_NO_CONTENT)
