@@ -144,9 +144,9 @@ def savings_stats(request):
     """Récupère les statistiques d'épargne de l'utilisateur"""
     
     try:
-        # Pour test temporaire, utiliser l'utilisateur test
-        user = User.objects.get(email="test@xamila.com")
-        logger.info(f"Savings stats request for test user: {user.email}")
+        # Utiliser l'utilisateur authentifié depuis le token JWT
+        user = request.user
+        logger.info(f"Savings stats request for user: {user.email}")
         
         # Calculer les statistiques
         deposits_data = SavingsDeposit.objects.filter(
@@ -204,9 +204,9 @@ def savings_deposit(request):
     """Crée un nouveau dépôt d'épargne"""
     
     try:
-        # Pour test temporaire, utiliser l'utilisateur test
-        user = User.objects.get(email="test@xamila.com")
-        logger.info(f"Savings deposit request for test user: {user.email}")
+        # Utiliser l'utilisateur authentifié depuis le token JWT
+        user = request.user
+        logger.info(f"Savings deposit request for user: {user.email}")
         
         # Récupérer les données du dépôt
         montant = request.data.get('montant')
