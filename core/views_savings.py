@@ -37,7 +37,7 @@ def savings_account(request):
             savings_account = SavingsAccount.objects.create(
                 user=user,
                 account_name="Compte Principal",
-                account_number=f"ACC{user.id}",
+                account_number=f"ACC{str(user.id)[:8]}",
                 balance=Decimal('0.00'),
                 account_type='BASIC',
                 status='ACTIVE'
