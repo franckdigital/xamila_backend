@@ -243,6 +243,10 @@ def savings_deposit(request):
             
             if not default_challenge:
                 # Créer un défi par défaut
+                from datetime import date, timedelta
+                start_date = date.today()
+                end_date = start_date + timedelta(days=30)
+                
                 default_challenge = SavingsChallenge.objects.create(
                     title="Défi d'épargne général",
                     description="Défi d'épargne pour tous les utilisateurs",
@@ -252,6 +256,8 @@ def savings_deposit(request):
                     target_amount=Decimal('50000.00'),
                     minimum_deposit=Decimal('1000.00'),
                     duration_days=30,
+                    start_date=start_date,
+                    end_date=end_date,
                     is_public=True,
                     status='ACTIVE',
                     created_by=user
