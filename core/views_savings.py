@@ -246,9 +246,11 @@ def savings_deposit(request):
                 default_challenge = SavingsChallenge.objects.create(
                     title="Défi d'épargne général",
                     description="Défi d'épargne pour tous les utilisateurs",
+                    short_description="Défi d'épargne mensuel pour débutants",
                     challenge_type='MONTHLY',
                     category='BEGINNER',
                     target_amount=Decimal('50000.00'),
+                    minimum_deposit=Decimal('1000.00'),
                     duration_days=30,
                     is_public=True,
                     status='ACTIVE',
