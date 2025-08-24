@@ -1,0 +1,3596 @@
+openapi: 3.0.3
+info:
+  title: Xamila Fintech Platform API
+  version: 2.0.0
+  description: "API complète de la plateforme fintech Xamila\n\n## Fonctionnalités\
+    \ principales\n\n### \U0001F510 Authentification et KYC\n- Inscription et connexion\
+    \ sécurisées multi-rôles\n- Vérification OTP (email + SMS)\n- Gestion complète\
+    \ du profil KYC\n- Upload et validation de documents\n\n### \U0001F3E6 Gestion\
+    \ SGI (Sociétés de Gestion d'Investissement)\n- Enregistrement et validation des\
+    \ SGI\n- Gestion des managers SGI\n- Matching intelligent clients-SGI\n- Suivi\
+    \ des performances et analytics\n\n### \U0001F4B0 Challenge Épargne\n- Défis d'épargne\
+    \ gamifiés\n- Objectifs personnalisés et suivi de progression\n- Système de points\
+    \ et récompenses\n- Classements et leaderboards\n- Comptes d'épargne virtuels\n\
+    \n### \U0001F4DA E-Learning et Formation\n- Parcours d'apprentissage structurés\n\
+    - Modules interactifs et quiz avancés\n- Système de certification\n- Suivi de\
+    \ progression et analytics\n- Gestion des instructeurs\n\n### \U0001F504 Trading\
+    \ et Investissement\n- Gestion de portefeuilles\n- Ordres et positions de trading\n\
+    - Suivi des transactions\n- Analytics de performance\n- Gestion des risques\n\n\
+    ### \U0001F4E7 Système de Notifications\n- Templates et campagnes personnalisables\n\
+    - Notifications multi-canal (email, SMS, push, in-app)\n- Préférences utilisateur\
+    \ granulaires\n- Analytics et métriques de performance\n- Webhooks et intégrations\n\
+    \n### \U0001F4CA Fonctionnalités avancées\n- Système de matching basé sur les\
+    \ critères\n- Reporting et business intelligence\n- Gestion des contrats et signatures\
+    \ électroniques\n- Sécurité et conformité réglementaire\n\n## Authentification\n\
+    \nCette API utilise JWT (JSON Web Tokens) pour l'authentification.\n\n### Rôles\
+    \ utilisateur\n- **CUSTOMER** : Client final (défaut)\n- **STUDENT** : Apprenant\
+    \ formations\n- **SGI_MANAGER** : Gestionnaire SGI\n- **INSTRUCTOR** : Formateur\n\
+    - **SUPPORT** : Support client\n- **ADMIN** : Administrateur\n\n### Workflow d'authentification\n\
+    1. **Inscription** : `POST /api/{role}/auth/register/` (customer, student, sgi_manager,\
+    \ etc.)\n2. **Vérification OTP** : `POST /api/{role}/auth/verify-otp/`\n3. **Connexion**\
+    \ : `POST /api/{role}/auth/login/`\n4. **Utilisation** : Inclure le token dans\
+    \ l'en-tête : `Authorization: Bearer <token>`\n5. **Rafraîchissement** : `POST\
+    \ /api/auth/token/refresh/`\n\n## Codes de statut\n\n- `200` : Succès\n- `201`\
+    \ : Créé avec succès\n- `400` : Erreur de validation\n- `401` : Non authentifié\n\
+    - `403` : Non autorisé (permissions insuffisantes)\n- `404` : Ressource non trouvée\n\
+    - `409` : Conflit (ressource déjà existante)\n- `429` : Trop de requêtes\n- `500`\
+    \ : Erreur serveur interne\n    "
+  contact:
+    name: Équipe Xamila
+    email: api@xamila.com
+    url: https://xamila.com/support
+  license:
+    name: Propriétaire Xamila
+    url: https://xamila.com/license
+paths:
+  /api/auth/login/:
+    post:
+      operationId: api_auth_login_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/auth/refresh/:
+    post:
+      operationId: api_auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/auth/register/customer/:
+    post:
+      operationId: api_auth_register_customer_create
+      description: Enregistrement d'un client/épargnant
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/register/student/:
+    post:
+      operationId: api_auth_register_student_create
+      description: Enregistrement d'un étudiant/apprenant pour les formations
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/register/sgi-manager/:
+    post:
+      operationId: api_auth_register_sgi_manager_create
+      description: Enregistrement d'un manager SGI avec création automatique de la
+        SGI
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/register/instructor/:
+    post:
+      operationId: api_auth_register_instructor_create
+      description: Enregistrement d'un instructeur/formateur
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/register/support/:
+    post:
+      operationId: api_auth_register_support_create
+      description: Enregistrement d'un agent support client
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/admin/users/create/:
+    post:
+      operationId: api_auth_admin_users_create_create
+      description: Vue pour que l'admin puisse créer des utilisateurs avec n'importe
+        quel rôle
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserCreation'
+          description: ''
+  /api/auth/admin/users/:
+    get:
+      operationId: api_auth_admin_users_list
+      description: Vue pour lister tous les utilisateurs (admin seulement)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+  /api/auth/verify-otp/:
+    post:
+      operationId: api_auth_verify_otp_create
+      description: Vérification du code OTP pour activer le compte
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/resend-otp/:
+    post:
+      operationId: api_auth_resend_otp_create
+      description: Renvoyer un code OTP
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/auth/profile/:
+    get:
+      operationId: api_auth_profile_retrieve
+      description: Récupérer le profil de l'utilisateur connecté
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/profile/update/:
+    put:
+      operationId: api_auth_profile_update_update
+      description: Mettre à jour le profil utilisateur
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/users/:
+    get:
+      operationId: api_admin_users_list
+      description: |-
+        Liste complète des utilisateurs avec filtres avancés
+        GET /api/admin/users/
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+  /api/admin/users/{id}/:
+    get:
+      operationId: api_admin_users_retrieve
+      description: |-
+        Détails complets d'un utilisateur
+        GET /api/admin/users/{id}/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/admin/users/{user_id}/action/:
+    post:
+      operationId: api_admin_users_action_create
+      description: |-
+        Actions administratives sur un utilisateur
+        POST /api/admin/users/{id}/action/
+
+        Actions possibles:
+        - activate: Activer le compte
+        - deactivate: Désactiver le compte
+        - verify: Marquer comme vérifié
+        - unverify: Retirer la vérification
+        - reset_password: Réinitialiser le mot de passe
+        - send_otp: Envoyer un nouveau code OTP
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/dashboard/stats/:
+    get:
+      operationId: api_admin_dashboard_stats_retrieve
+      description: |-
+        Statistiques pour le tableau de bord admin
+        GET /api/admin/dashboard/stats/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/sgis/:
+    get:
+      operationId: api_admin_sgis_retrieve
+      description: |-
+        Liste des SGI avec informations détaillées pour l'admin
+        GET /api/admin/sgis/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/sgis/{sgi_id}/action/:
+    post:
+      operationId: api_admin_sgis_action_create
+      description: |-
+        Actions administratives sur une SGI
+        POST /api/admin/sgis/{id}/action/
+
+        Actions: approve, reject, suspend, reactivate
+      parameters:
+      - in: path
+        name: sgi_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/content/stats/:
+    get:
+      operationId: api_admin_content_stats_retrieve
+      description: |-
+        Statistiques du contenu e-learning
+        GET /api/admin/content/stats/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/logs/:
+    get:
+      operationId: api_admin_logs_retrieve
+      description: |-
+        Logs d'activité pour audit
+        GET /api/admin/logs/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/sgis/analytics/:
+    get:
+      operationId: api_admin_sgis_analytics_retrieve
+      description: |-
+        Analytics avancées des SGI
+        GET /api/admin/sgis/analytics/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/sgis/bulk-action/:
+    post:
+      operationId: api_admin_sgis_bulk_action_create
+      description: |-
+        Actions en lot sur les SGI
+        POST /api/admin/sgis/bulk-action/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/contracts/:
+    get:
+      operationId: api_admin_contracts_retrieve
+      description: |-
+        Liste détaillée des contrats avec filtres
+        GET /api/admin/contracts/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/contracts/dashboard/:
+    get:
+      operationId: api_admin_contracts_dashboard_retrieve
+      description: |-
+        Tableau de bord des contrats
+        GET /api/admin/contracts/dashboard/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/contracts/{contract_id}/action/:
+    post:
+      operationId: api_admin_contracts_action_create
+      description: |-
+        Actions administratives sur un contrat
+        POST /api/admin/contracts/{id}/action/
+      parameters:
+      - in: path
+        name: contract_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/export/users/:
+    get:
+      operationId: api_admin_export_users_retrieve
+      description: |-
+        Export des utilisateurs en CSV
+        GET /api/admin/export/users/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/bi/:
+    get:
+      operationId: api_admin_bi_retrieve
+      description: |-
+        Business Intelligence et métriques avancées
+        GET /api/admin/bi/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/matching/analytics/:
+    get:
+      operationId: api_admin_matching_analytics_retrieve
+      description: |-
+        Analytics du système de matching SGI
+        GET /api/admin/matching/analytics/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/matching/configure/:
+    post:
+      operationId: api_admin_matching_configure_create
+      description: |-
+        Configuration du système de matching
+        POST /api/admin/matching/configure/
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/customer/auth/register/:
+    post:
+      operationId: api_customer_auth_register_create
+      description: Inscription d'un nouveau client sur la plateforme Xamila avec envoi
+        automatique des codes OTP.
+      summary: Inscription client
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerRegistrationResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/customer/auth/verify-otp/:
+    post:
+      operationId: api_customer_auth_verify_otp_create
+      description: Vérification des codes OTP (email + SMS) pour activer le compte
+        client.
+      summary: Vérification OTP
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPVerificationResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/customer/auth/resend-otp/:
+    post:
+      operationId: api_customer_auth_resend_otp_create
+      description: Renvoie un code OTP
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/customer/auth/login/:
+    post:
+      operationId: api_customer_auth_login_create
+      description: Connexion sécurisée pour les clients avec retour des tokens JWT
+        et informations KYC.
+      summary: Connexion client
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomerLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomerLoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerLoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/customer/kyc/profile/create/:
+    post:
+      operationId: api_customer_kyc_profile_create_create
+      description: Création du profil KYC complet pour un client authentifié (informations
+        personnelles, adresse, documents d'identité).
+      summary: Créer profil KYC
+      tags:
+      - KYC
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KYCProfileCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/KYCProfileCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KYCProfileCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfile'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/customer/kyc/profile/:
+    get:
+      operationId: api_customer_kyc_profile_retrieve
+      description: Récupération et mise à jour du profil KYC
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfile'
+          description: ''
+    put:
+      operationId: api_customer_kyc_profile_update
+      description: Récupération et mise à jour du profil KYC
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KYCProfileUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/KYCProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KYCProfileUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfileUpdate'
+          description: ''
+    patch:
+      operationId: api_customer_kyc_profile_partial_update
+      description: Récupération et mise à jour du profil KYC
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedKYCProfileUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedKYCProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedKYCProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCProfileUpdate'
+          description: ''
+  /api/customer/kyc/status/:
+    get:
+      operationId: api_customer_kyc_status_retrieve
+      description: Récupération du statut KYC détaillé
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/customer/kyc/submit/:
+    post:
+      operationId: api_customer_kyc_submit_create
+      description: Soumission du profil KYC pour révision
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/customer/kyc/documents/upload/:
+    post:
+      operationId: api_customer_kyc_documents_upload_create
+      description: Upload de documents KYC
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/customer/kyc/documents/:
+    get:
+      operationId: api_customer_kyc_documents_list
+      description: Liste des documents KYC de l'utilisateur
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedKYCDocumentList'
+          description: ''
+  /api/sgis/:
+    get:
+      operationId: api_sgis_list
+      description: Liste de toutes les SGI actives
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSGIListList'
+          description: ''
+  /api/sgis/{id}/:
+    get:
+      operationId: api_sgis_retrieve
+      description: Détails d'une SGI spécifique
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SGI'
+          description: ''
+  /api/profile/:
+    get:
+      operationId: api_profile_retrieve
+      description: Profil d'investissement du client connecté
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientInvestmentProfile'
+          description: ''
+    put:
+      operationId: api_profile_update
+      description: Profil d'investissement du client connecté
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientInvestmentProfile'
+          description: ''
+    patch:
+      operationId: api_profile_partial_update
+      description: Profil d'investissement du client connecté
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClientInvestmentProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClientInvestmentProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClientInvestmentProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientInvestmentProfile'
+          description: ''
+  /api/profile/create/:
+    post:
+      operationId: api_profile_create_create
+      description: Création du profil d'investissement client
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientInvestmentProfileCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientInvestmentProfileCreate'
+          description: ''
+  /api/matching/criteria/:
+    get:
+      operationId: api_matching_criteria_retrieve
+      description: Retourne les critères de matching disponibles
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/matching/launch/:
+    post:
+      operationId: api_matching_launch_create
+      description: Lancement d'une demande de matching SGI
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/matching/{id}/results/:
+    get:
+      operationId: api_matching_results_retrieve
+      description: Récupération des résultats d'une demande de matching
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SGIMatchingRequest'
+          description: ''
+  /api/sgi/select/:
+    post:
+      operationId: api_sgi_select_create
+      description: Sélection d'une SGI par le client
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/interactions/:
+    get:
+      operationId: api_interactions_list
+      description: Liste des interactions du client connecté
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClientSGIInteractionList'
+          description: ''
+  /api/admin/dashboard/:
+    get:
+      operationId: api_admin_dashboard_list
+      description: Dashboard admin pour le suivi des interactions SGI
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminDashboardEntryList'
+          description: ''
+  /api/admin/statistics/sgis/:
+    get:
+      operationId: api_admin_statistics_sgis_retrieve
+      description: Statistiques générales des SGI
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/statistics/clients/:
+    get:
+      operationId: api_admin_statistics_clients_retrieve
+      description: Statistiques des clients
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/admin/notifications/:
+    get:
+      operationId: api_admin_notifications_list
+      description: Liste des notifications email (admin seulement)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmailNotificationList'
+          description: ''
+components:
+  schemas:
+    AdminDashboardEntry:
+      type: object
+      description: Serializer pour les entrées du dashboard admin
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        client_interaction:
+          allOf:
+          - $ref: '#/components/schemas/ClientSGIInteraction'
+          readOnly: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          title: Niveau de priorité
+        follow_up_status:
+          allOf:
+          - $ref: '#/components/schemas/FollowUpStatusEnum'
+          title: Statut de suivi
+        admin_notes:
+          type: string
+          title: Notes administratives
+        assigned_to:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_to
+      - client_interaction
+      - created_at
+      - id
+      - priority
+      - updated_at
+    AdminUserCreation:
+      type: object
+      description: Serializer pour la création d'utilisateurs par l'admin
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          pattern: ^\+?1?\d{9,15}$
+          maxLength: 20
+        country_of_residence:
+          type: string
+          nullable: true
+          maxLength: 100
+        country_of_origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - role
+      - username
+    AdminUserCreationRequest:
+      type: object
+      description: Serializer pour la création d'utilisateurs par l'admin
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          pattern: ^\+?1?\d{9,15}$
+          maxLength: 20
+        country_of_residence:
+          type: string
+          nullable: true
+          maxLength: 100
+        country_of_origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - password
+      - password_confirm
+      - role
+      - username
+    ClientInvestmentProfile:
+      type: object
+      description: Serializer pour les profils d'investissement clients
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        full_name:
+          type: string
+          title: Nom complet
+          maxLength: 200
+        phone:
+          type: string
+          title: Téléphone
+          maxLength: 20
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        age:
+          type: string
+          readOnly: true
+        profession:
+          type: string
+          maxLength: 100
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Revenus mensuels (FCFA)
+        investment_objective:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentObjectiveEnum'
+          title: Objectif d'investissement
+        risk_tolerance:
+          allOf:
+          - $ref: '#/components/schemas/RiskToleranceEnum'
+          title: Tolérance au risque
+        investment_horizon:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentHorizonEnum'
+          title: Horizon d'investissement
+        investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant à investir (FCFA)
+        investment_experience:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentExperienceEnum'
+          title: Expérience d'investissement
+        preferred_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs préférés
+          description: Liste des secteurs d'activité préférés
+        exclude_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs à exclure
+          description: Liste des secteurs à éviter
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_complete:
+          type: boolean
+          title: Profil complet
+      required:
+      - age
+      - created_at
+      - date_of_birth
+      - full_name
+      - id
+      - investment_amount
+      - investment_experience
+      - investment_horizon
+      - investment_objective
+      - monthly_income
+      - phone
+      - profession
+      - risk_tolerance
+      - updated_at
+      - user
+    ClientInvestmentProfileCreate:
+      type: object
+      description: Serializer pour la création de profils d'investissement
+      properties:
+        full_name:
+          type: string
+          title: Nom complet
+          maxLength: 200
+        phone:
+          type: string
+          title: Téléphone
+          maxLength: 20
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        profession:
+          type: string
+          maxLength: 100
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Revenus mensuels (FCFA)
+        investment_objective:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentObjectiveEnum'
+          title: Objectif d'investissement
+        risk_tolerance:
+          allOf:
+          - $ref: '#/components/schemas/RiskToleranceEnum'
+          title: Tolérance au risque
+        investment_horizon:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentHorizonEnum'
+          title: Horizon d'investissement
+        investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant à investir (FCFA)
+        investment_experience:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentExperienceEnum'
+          title: Expérience d'investissement
+        preferred_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs préférés
+          description: Liste des secteurs d'activité préférés
+        exclude_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs à exclure
+          description: Liste des secteurs à éviter
+      required:
+      - date_of_birth
+      - full_name
+      - investment_amount
+      - investment_experience
+      - investment_horizon
+      - investment_objective
+      - monthly_income
+      - phone
+      - profession
+      - risk_tolerance
+    ClientInvestmentProfileCreateRequest:
+      type: object
+      description: Serializer pour la création de profils d'investissement
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          title: Nom complet
+          maxLength: 200
+        phone:
+          type: string
+          minLength: 1
+          title: Téléphone
+          maxLength: 20
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        profession:
+          type: string
+          minLength: 1
+          maxLength: 100
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Revenus mensuels (FCFA)
+        investment_objective:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentObjectiveEnum'
+          title: Objectif d'investissement
+        risk_tolerance:
+          allOf:
+          - $ref: '#/components/schemas/RiskToleranceEnum'
+          title: Tolérance au risque
+        investment_horizon:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentHorizonEnum'
+          title: Horizon d'investissement
+        investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant à investir (FCFA)
+        investment_experience:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentExperienceEnum'
+          title: Expérience d'investissement
+        preferred_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs préférés
+          description: Liste des secteurs d'activité préférés
+        exclude_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs à exclure
+          description: Liste des secteurs à éviter
+      required:
+      - date_of_birth
+      - full_name
+      - investment_amount
+      - investment_experience
+      - investment_horizon
+      - investment_objective
+      - monthly_income
+      - phone
+      - profession
+      - risk_tolerance
+    ClientInvestmentProfileRequest:
+      type: object
+      description: Serializer pour les profils d'investissement clients
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          title: Nom complet
+          maxLength: 200
+        phone:
+          type: string
+          minLength: 1
+          title: Téléphone
+          maxLength: 20
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        profession:
+          type: string
+          minLength: 1
+          maxLength: 100
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Revenus mensuels (FCFA)
+        investment_objective:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentObjectiveEnum'
+          title: Objectif d'investissement
+        risk_tolerance:
+          allOf:
+          - $ref: '#/components/schemas/RiskToleranceEnum'
+          title: Tolérance au risque
+        investment_horizon:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentHorizonEnum'
+          title: Horizon d'investissement
+        investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant à investir (FCFA)
+        investment_experience:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentExperienceEnum'
+          title: Expérience d'investissement
+        preferred_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs préférés
+          description: Liste des secteurs d'activité préférés
+        exclude_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs à exclure
+          description: Liste des secteurs à éviter
+        is_complete:
+          type: boolean
+          title: Profil complet
+      required:
+      - date_of_birth
+      - full_name
+      - investment_amount
+      - investment_experience
+      - investment_horizon
+      - investment_objective
+      - monthly_income
+      - phone
+      - profession
+      - risk_tolerance
+    ClientSGIInteraction:
+      type: object
+      description: Serializer pour les interactions Client-SGI
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        client_profile:
+          allOf:
+          - $ref: '#/components/schemas/ClientInvestmentProfile'
+          readOnly: true
+        sgi:
+          allOf:
+          - $ref: '#/components/schemas/SGIList'
+          readOnly: true
+        matching_request:
+          type: string
+          format: uuid
+          nullable: true
+        interaction_type:
+          allOf:
+          - $ref: '#/components/schemas/InteractionTypeEnum'
+          title: Type d'interaction
+        matching_score:
+          type: integer
+          maximum: 100
+          minimum: 0
+          title: Score de compatibilité
+        notes:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ClientSGIInteractionStatusEnum'
+          title: Statut
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client_profile
+      - created_at
+      - id
+      - interaction_type
+      - matching_score
+      - sgi
+      - updated_at
+    ClientSGIInteractionStatusEnum:
+      enum:
+      - INITIATED
+      - IN_PROGRESS
+      - COMPLETED
+      - CANCELLED
+      type: string
+      description: |-
+        * `INITIATED` - Initié
+        * `IN_PROGRESS` - En cours
+        * `COMPLETED` - Terminé
+        * `CANCELLED` - Annulé
+    CustomerLoginRequest:
+      type: object
+      description: Serializer pour la connexion client
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Adresse email du client
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: Mot de passe du client
+      required:
+      - email
+      - password
+    CustomerLoginResponse:
+      type: object
+      description: Serializer pour la réponse de connexion client
+      properties:
+        message:
+          type: string
+          description: Message de confirmation
+        access_token:
+          type: string
+          description: Token d'accès JWT
+        refresh_token:
+          type: string
+          description: Token de rafraîchissement JWT
+        user_id:
+          type: string
+          format: uuid
+          description: ID de l'utilisateur
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur
+        role:
+          type: string
+          description: Rôle de l'utilisateur
+        kyc_status:
+          type: string
+          description: Statut KYC de l'utilisateur
+        kyc_completion:
+          type: number
+          format: double
+          description: Pourcentage de completion KYC
+      required:
+      - access_token
+      - email
+      - kyc_completion
+      - kyc_status
+      - message
+      - refresh_token
+      - role
+      - user_id
+    CustomerRegistrationRequest:
+      type: object
+      description: Serializer pour l'inscription d'un nouveau client CUSTOMER
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Adresse email du client (sera utilisée pour la connexion)
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+          description: Mot de passe sécurisé (minimum 8 caractères)
+        phone:
+          type: string
+          minLength: 1
+          description: Numéro de téléphone au format international (+33...)
+          maxLength: 20
+        first_name:
+          type: string
+          minLength: 1
+          description: Prénom du client
+          maxLength: 30
+        last_name:
+          type: string
+          minLength: 1
+          description: Nom de famille du client
+          maxLength: 30
+      required:
+      - email
+      - first_name
+      - last_name
+      - password
+      - phone
+    CustomerRegistrationResponse:
+      type: object
+      description: Serializer pour la réponse d'inscription client
+      properties:
+        message:
+          type: string
+          description: Message de confirmation
+        user_id:
+          type: string
+          format: uuid
+          description: ID unique de l'utilisateur créé
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur
+        phone:
+          type: string
+          description: Téléphone de l'utilisateur
+        otp_sent:
+          type: boolean
+          description: Codes OTP envoyés avec succès
+        next_step:
+          type: string
+          description: Prochaine étape du processus
+      required:
+      - email
+      - message
+      - next_step
+      - otp_sent
+      - phone
+      - user_id
+    DocumentTypeEnum:
+      enum:
+      - IDENTITY_FRONT
+      - IDENTITY_BACK
+      - SELFIE
+      - PROOF_OF_ADDRESS
+      - BANK_STATEMENT
+      - SALARY_SLIP
+      - OTHER
+      type: string
+      description: |-
+        * `IDENTITY_FRONT` - Pièce d'identité (recto)
+        * `IDENTITY_BACK` - Pièce d'identité (verso)
+        * `SELFIE` - Photo selfie
+        * `PROOF_OF_ADDRESS` - Justificatif de domicile
+        * `BANK_STATEMENT` - Relevé bancaire
+        * `SALARY_SLIP` - Fiche de paie
+        * `OTHER` - Autre document
+    EmailNotification:
+      type: object
+      description: Serializer pour les notifications email
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        to_email:
+          type: string
+          format: email
+          title: Email destinataire
+          maxLength: 254
+        from_email:
+          type: string
+          format: email
+          title: Email expéditeur
+          maxLength: 254
+        subject:
+          type: string
+          title: Sujet
+          maxLength: 200
+        message:
+          type: string
+        html_message:
+          type: string
+          title: Message HTML
+        notification_type:
+          allOf:
+          - $ref: '#/components/schemas/NotificationTypeEnum'
+          title: Type de notification
+        client_interaction:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/EmailNotificationStatusEnum'
+          title: Statut d'envoi
+        error_message:
+          type: string
+          title: Message d'erreur
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - from_email
+      - id
+      - message
+      - notification_type
+      - sent_at
+      - subject
+      - to_email
+    EmailNotificationStatusEnum:
+      enum:
+      - PENDING
+      - SENT
+      - FAILED
+      - BOUNCED
+      type: string
+      description: |-
+        * `PENDING` - En attente
+        * `SENT` - Envoyé
+        * `FAILED` - Échec
+        * `BOUNCED` - Rejeté
+    ErrorResponse:
+      type: object
+      description: Serializer pour les réponses d'erreur standardisées
+      properties:
+        error:
+          type: string
+          description: Message d'erreur principal
+        details:
+          type: object
+          additionalProperties: {}
+          description: Détails spécifiques de l'erreur (validation, etc.)
+        code:
+          type: string
+          description: Code d'erreur spécifique
+      required:
+      - error
+    FollowUpStatusEnum:
+      enum:
+      - NEW
+      - CONTACTED
+      - IN_NEGOTIATION
+      - CLOSED_WON
+      - CLOSED_LOST
+      type: string
+      description: |-
+        * `NEW` - Nouveau
+        * `CONTACTED` - Contacté
+        * `IN_NEGOTIATION` - En négociation
+        * `CLOSED_WON` - Conclu (gagné)
+        * `CLOSED_LOST` - Conclu (perdu)
+    GenderEnum:
+      enum:
+      - M
+      - F
+      - O
+      type: string
+      description: |-
+        * `M` - Masculin
+        * `F` - Féminin
+        * `O` - Autre
+    IdentityDocumentTypeEnum:
+      enum:
+      - PASSPORT
+      - NATIONAL_ID
+      - DRIVER_LICENSE
+      - RESIDENCE_PERMIT
+      type: string
+      description: |-
+        * `PASSPORT` - Passeport
+        * `NATIONAL_ID` - Carte d'identité nationale
+        * `DRIVER_LICENSE` - Permis de conduire
+        * `RESIDENCE_PERMIT` - Titre de séjour
+    InteractionTypeEnum:
+      enum:
+      - VIEW
+      - CONTACT
+      - SELECTION
+      - MEETING
+      - CONTRACT
+      type: string
+      description: |-
+        * `VIEW` - Consultation
+        * `CONTACT` - Prise de contact
+        * `SELECTION` - Sélection
+        * `MEETING` - Rendez-vous
+        * `CONTRACT` - Signature contrat
+    InvestmentExperienceEnum:
+      enum:
+      - BEGINNER
+      - INTERMEDIATE
+      - ADVANCED
+      - EXPERT
+      type: string
+      description: |-
+        * `BEGINNER` - Débutant
+        * `INTERMEDIATE` - Intermédiaire
+        * `ADVANCED` - Avancé
+        * `EXPERT` - Expert
+    InvestmentHorizonEnum:
+      enum:
+      - SHORT
+      - MEDIUM
+      - LONG
+      type: string
+      description: |-
+        * `SHORT` - Court terme (< 2 ans)
+        * `MEDIUM` - Moyen terme (2-5 ans)
+        * `LONG` - Long terme (> 5 ans)
+    InvestmentObjectiveEnum:
+      enum:
+      - GROWTH
+      - INCOME
+      - BALANCED
+      - CONSERVATIVE
+      - AGGRESSIVE
+      type: string
+      description: |-
+        * `GROWTH` - Croissance
+        * `INCOME` - Revenus
+        * `BALANCED` - Équilibré
+        * `CONSERVATIVE` - Conservateur
+        * `AGGRESSIVE` - Agressif
+    KYCDocument:
+      type: object
+      description: Serializer pour les documents KYC
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        document_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          title: Type de document
+        file:
+          type: string
+          format: uri
+          title: Fichier
+        file_url:
+          type: string
+          readOnly: true
+        original_filename:
+          type: string
+          readOnly: true
+          title: Nom original du fichier
+        file_size:
+          type: integer
+          readOnly: true
+          title: Taille du fichier (bytes)
+        file_size_mb:
+          type: string
+          readOnly: true
+        mime_type:
+          type: string
+          readOnly: true
+          title: Type MIME
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          title: Statut de vérification
+        auto_verification_score:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+          title: Score de vérification automatique (%)
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rejection_reason:
+          type: string
+          title: Motif de rejet
+      required:
+      - auto_verification_score
+      - document_type
+      - file
+      - file_size
+      - file_size_mb
+      - file_url
+      - id
+      - mime_type
+      - original_filename
+      - uploaded_at
+      - verified_at
+    KYCProfile:
+      type: object
+      description: Serializer pour le profil KYC
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        user_email:
+          type: string
+          readOnly: true
+        user_phone:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 100
+        last_name:
+          type: string
+          title: Nom de famille
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          title: Nom du milieu
+          maxLength: 100
+        full_name:
+          type: string
+          readOnly: true
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        age:
+          type: string
+          readOnly: true
+        place_of_birth:
+          type: string
+          title: Lieu de naissance
+          maxLength: 200
+        nationality:
+          type: string
+          title: Nationalité
+          maxLength: 100
+        gender:
+          allOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          title: Genre
+        address_line_1:
+          type: string
+          title: Adresse ligne 1
+          maxLength: 200
+        address_line_2:
+          type: string
+          nullable: true
+          title: Adresse ligne 2
+          maxLength: 200
+        city:
+          type: string
+          title: Ville
+          maxLength: 100
+        state_province:
+          type: string
+          title: État/Province
+          maxLength: 100
+        postal_code:
+          type: string
+          title: Code postal
+          maxLength: 20
+        country:
+          type: string
+          title: Pays
+          maxLength: 100
+        identity_document_type:
+          allOf:
+          - $ref: '#/components/schemas/IdentityDocumentTypeEnum'
+          title: Type de document d'identité
+        identity_document_number:
+          type: string
+          title: Numéro du document d'identité
+          maxLength: 50
+        identity_document_expiry:
+          type: string
+          format: date
+          nullable: true
+          title: Date d'expiration du document
+        identity_document_issuing_country:
+          type: string
+          title: Pays d'émission du document
+          maxLength: 100
+        occupation:
+          type: string
+          title: Profession
+          maxLength: 200
+        employer_name:
+          type: string
+          nullable: true
+          title: Nom de l'employeur
+          maxLength: 200
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Revenus mensuels (FCFA)
+        source_of_funds:
+          allOf:
+          - $ref: '#/components/schemas/SourceOfFundsEnum'
+          title: Source des fonds
+        kyc_status:
+          allOf:
+          - $ref: '#/components/schemas/KycStatusEnum'
+          readOnly: true
+          title: Statut KYC
+        risk_level:
+          allOf:
+          - $ref: '#/components/schemas/RiskLevelEnum'
+          readOnly: true
+          title: Niveau de risque
+        identity_verification_status:
+          allOf:
+          - $ref: '#/components/schemas/SelfieVerificationStatusEnum'
+          readOnly: true
+          title: Statut vérification identité
+        address_verification_status:
+          allOf:
+          - $ref: '#/components/schemas/SelfieVerificationStatusEnum'
+          readOnly: true
+          title: Statut vérification adresse
+        selfie_verification_status:
+          allOf:
+          - $ref: '#/components/schemas/SelfieVerificationStatusEnum'
+          readOnly: true
+          title: Statut vérification selfie
+        verification_provider:
+          readOnly: true
+          nullable: true
+          title: Fournisseur de vérification
+          oneOf:
+          - $ref: '#/components/schemas/VerificationProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        verification_reference:
+          type: string
+          readOnly: true
+          nullable: true
+          title: Référence de vérification externe
+        verification_score:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+          title: Score de vérification (%)
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Date de soumission
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Date de révision
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Date d'approbation
+        rejected_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Date de rejet
+        rejection_reason:
+          type: string
+          readOnly: true
+          title: Motif de rejet
+        is_kyc_complete:
+          type: string
+          readOnly: true
+        completion_percentage:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/KYCDocument'
+          readOnly: true
+      required:
+      - address_line_1
+      - address_verification_status
+      - age
+      - approved_at
+      - city
+      - completion_percentage
+      - country
+      - created_at
+      - date_of_birth
+      - documents
+      - first_name
+      - full_name
+      - gender
+      - id
+      - identity_document_issuing_country
+      - identity_document_number
+      - identity_document_type
+      - identity_verification_status
+      - is_kyc_complete
+      - kyc_status
+      - last_name
+      - nationality
+      - occupation
+      - place_of_birth
+      - postal_code
+      - rejected_at
+      - rejection_reason
+      - reviewed_at
+      - risk_level
+      - selfie_verification_status
+      - source_of_funds
+      - state_province
+      - submitted_at
+      - updated_at
+      - user
+      - user_email
+      - user_phone
+      - verification_provider
+      - verification_reference
+      - verification_score
+    KYCProfileCreateRequest:
+      type: object
+      description: Serializer pour la création d'un profil KYC
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          title: Prénom
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          title: Nom de famille
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          title: Nom du milieu
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        place_of_birth:
+          type: string
+          minLength: 1
+          title: Lieu de naissance
+          maxLength: 200
+        nationality:
+          type: string
+          minLength: 1
+          title: Nationalité
+          maxLength: 100
+        gender:
+          allOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          title: Genre
+        address_line_1:
+          type: string
+          minLength: 1
+          title: Adresse ligne 1
+          maxLength: 200
+        address_line_2:
+          type: string
+          nullable: true
+          title: Adresse ligne 2
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          title: Ville
+          maxLength: 100
+        state_province:
+          type: string
+          minLength: 1
+          title: État/Province
+          maxLength: 100
+        postal_code:
+          type: string
+          minLength: 1
+          title: Code postal
+          maxLength: 20
+        country:
+          type: string
+          minLength: 1
+          title: Pays
+          maxLength: 100
+        identity_document_type:
+          allOf:
+          - $ref: '#/components/schemas/IdentityDocumentTypeEnum'
+          title: Type de document d'identité
+        identity_document_number:
+          type: string
+          minLength: 1
+          title: Numéro du document d'identité
+          maxLength: 50
+        identity_document_expiry:
+          type: string
+          format: date
+          nullable: true
+          title: Date d'expiration du document
+        identity_document_issuing_country:
+          type: string
+          minLength: 1
+          title: Pays d'émission du document
+          maxLength: 100
+        occupation:
+          type: string
+          minLength: 1
+          title: Profession
+          maxLength: 200
+        employer_name:
+          type: string
+          nullable: true
+          title: Nom de l'employeur
+          maxLength: 200
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Revenus mensuels (FCFA)
+        source_of_funds:
+          allOf:
+          - $ref: '#/components/schemas/SourceOfFundsEnum'
+          title: Source des fonds
+      required:
+      - address_line_1
+      - city
+      - country
+      - date_of_birth
+      - first_name
+      - gender
+      - identity_document_issuing_country
+      - identity_document_number
+      - identity_document_type
+      - last_name
+      - nationality
+      - occupation
+      - place_of_birth
+      - postal_code
+      - source_of_funds
+      - state_province
+    KYCProfileUpdate:
+      type: object
+      description: Serializer pour la mise à jour d'un profil KYC
+      properties:
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 100
+        last_name:
+          type: string
+          title: Nom de famille
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          title: Nom du milieu
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        place_of_birth:
+          type: string
+          title: Lieu de naissance
+          maxLength: 200
+        nationality:
+          type: string
+          title: Nationalité
+          maxLength: 100
+        gender:
+          allOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          title: Genre
+        address_line_1:
+          type: string
+          title: Adresse ligne 1
+          maxLength: 200
+        address_line_2:
+          type: string
+          nullable: true
+          title: Adresse ligne 2
+          maxLength: 200
+        city:
+          type: string
+          title: Ville
+          maxLength: 100
+        state_province:
+          type: string
+          title: État/Province
+          maxLength: 100
+        postal_code:
+          type: string
+          title: Code postal
+          maxLength: 20
+        country:
+          type: string
+          title: Pays
+          maxLength: 100
+        identity_document_type:
+          allOf:
+          - $ref: '#/components/schemas/IdentityDocumentTypeEnum'
+          title: Type de document d'identité
+        identity_document_number:
+          type: string
+          title: Numéro du document d'identité
+          maxLength: 50
+        identity_document_expiry:
+          type: string
+          format: date
+          nullable: true
+          title: Date d'expiration du document
+        identity_document_issuing_country:
+          type: string
+          title: Pays d'émission du document
+          maxLength: 100
+        occupation:
+          type: string
+          title: Profession
+          maxLength: 200
+        employer_name:
+          type: string
+          nullable: true
+          title: Nom de l'employeur
+          maxLength: 200
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Revenus mensuels (FCFA)
+        source_of_funds:
+          allOf:
+          - $ref: '#/components/schemas/SourceOfFundsEnum'
+          title: Source des fonds
+      required:
+      - address_line_1
+      - city
+      - country
+      - date_of_birth
+      - first_name
+      - gender
+      - identity_document_issuing_country
+      - identity_document_number
+      - identity_document_type
+      - last_name
+      - nationality
+      - occupation
+      - place_of_birth
+      - postal_code
+      - source_of_funds
+      - state_province
+    KYCProfileUpdateRequest:
+      type: object
+      description: Serializer pour la mise à jour d'un profil KYC
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          title: Prénom
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          title: Nom de famille
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          title: Nom du milieu
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        place_of_birth:
+          type: string
+          minLength: 1
+          title: Lieu de naissance
+          maxLength: 200
+        nationality:
+          type: string
+          minLength: 1
+          title: Nationalité
+          maxLength: 100
+        gender:
+          allOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          title: Genre
+        address_line_1:
+          type: string
+          minLength: 1
+          title: Adresse ligne 1
+          maxLength: 200
+        address_line_2:
+          type: string
+          nullable: true
+          title: Adresse ligne 2
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          title: Ville
+          maxLength: 100
+        state_province:
+          type: string
+          minLength: 1
+          title: État/Province
+          maxLength: 100
+        postal_code:
+          type: string
+          minLength: 1
+          title: Code postal
+          maxLength: 20
+        country:
+          type: string
+          minLength: 1
+          title: Pays
+          maxLength: 100
+        identity_document_type:
+          allOf:
+          - $ref: '#/components/schemas/IdentityDocumentTypeEnum'
+          title: Type de document d'identité
+        identity_document_number:
+          type: string
+          minLength: 1
+          title: Numéro du document d'identité
+          maxLength: 50
+        identity_document_expiry:
+          type: string
+          format: date
+          nullable: true
+          title: Date d'expiration du document
+        identity_document_issuing_country:
+          type: string
+          minLength: 1
+          title: Pays d'émission du document
+          maxLength: 100
+        occupation:
+          type: string
+          minLength: 1
+          title: Profession
+          maxLength: 200
+        employer_name:
+          type: string
+          nullable: true
+          title: Nom de l'employeur
+          maxLength: 200
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Revenus mensuels (FCFA)
+        source_of_funds:
+          allOf:
+          - $ref: '#/components/schemas/SourceOfFundsEnum'
+          title: Source des fonds
+      required:
+      - address_line_1
+      - city
+      - country
+      - date_of_birth
+      - first_name
+      - gender
+      - identity_document_issuing_country
+      - identity_document_number
+      - identity_document_type
+      - last_name
+      - nationality
+      - occupation
+      - place_of_birth
+      - postal_code
+      - source_of_funds
+      - state_province
+    KycStatusEnum:
+      enum:
+      - PENDING
+      - UNDER_REVIEW
+      - APPROVED
+      - REJECTED
+      - EXPIRED
+      - SUSPENDED
+      type: string
+      description: |-
+        * `PENDING` - En attente
+        * `UNDER_REVIEW` - En cours de vérification
+        * `APPROVED` - Validé
+        * `REJECTED` - Rejeté
+        * `EXPIRED` - Expiré
+        * `SUSPENDED` - Suspendu
+    NotificationTypeEnum:
+      enum:
+      - SGI_MANAGER
+      - CLIENT_CONFIRMATION
+      - XAMILA_NOTIFICATION
+      - SYSTEM
+      type: string
+      description: |-
+        * `SGI_MANAGER` - Notification manager SGI
+        * `CLIENT_CONFIRMATION` - Confirmation client
+        * `XAMILA_NOTIFICATION` - Notification équipe Xamila
+        * `SYSTEM` - Notification système
+    NullEnum:
+      enum:
+      - null
+    OTPVerificationRequest:
+      type: object
+      description: Serializer pour la vérification des codes OTP
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: ID de l'utilisateur à vérifier
+        email_otp:
+          type: string
+          minLength: 6
+          description: Code OTP reçu par email (6 chiffres)
+          maxLength: 6
+        sms_otp:
+          type: string
+          minLength: 6
+          description: Code OTP reçu par SMS (6 chiffres)
+          maxLength: 6
+      required:
+      - email_otp
+      - sms_otp
+      - user_id
+    OTPVerificationResponse:
+      type: object
+      description: Serializer pour la réponse de vérification OTP
+      properties:
+        message:
+          type: string
+          description: Message de confirmation
+        access_token:
+          type: string
+          description: Token d'accès JWT
+        refresh_token:
+          type: string
+          description: Token de rafraîchissement JWT
+        user_id:
+          type: string
+          format: uuid
+          description: ID de l'utilisateur
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur
+        is_verified:
+          type: boolean
+          description: Compte vérifié avec succès
+        next_step:
+          type: string
+          description: Prochaine étape recommandée
+      required:
+      - access_token
+      - email
+      - is_verified
+      - message
+      - next_step
+      - refresh_token
+      - user_id
+    PaginatedAdminDashboardEntryList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminDashboardEntry'
+    PaginatedClientSGIInteractionList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSGIInteraction'
+    PaginatedEmailNotificationList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailNotification'
+    PaginatedKYCDocumentList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/KYCDocument'
+    PaginatedSGIListList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SGIList'
+    PaginatedUserList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PatchedClientInvestmentProfileRequest:
+      type: object
+      description: Serializer pour les profils d'investissement clients
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          title: Nom complet
+          maxLength: 200
+        phone:
+          type: string
+          minLength: 1
+          title: Téléphone
+          maxLength: 20
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        profession:
+          type: string
+          minLength: 1
+          maxLength: 100
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Revenus mensuels (FCFA)
+        investment_objective:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentObjectiveEnum'
+          title: Objectif d'investissement
+        risk_tolerance:
+          allOf:
+          - $ref: '#/components/schemas/RiskToleranceEnum'
+          title: Tolérance au risque
+        investment_horizon:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentHorizonEnum'
+          title: Horizon d'investissement
+        investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant à investir (FCFA)
+        investment_experience:
+          allOf:
+          - $ref: '#/components/schemas/InvestmentExperienceEnum'
+          title: Expérience d'investissement
+        preferred_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs préférés
+          description: Liste des secteurs d'activité préférés
+        exclude_sectors:
+          type: object
+          additionalProperties: {}
+          title: Secteurs à exclure
+          description: Liste des secteurs à éviter
+        is_complete:
+          type: boolean
+          title: Profil complet
+    PatchedKYCProfileUpdateRequest:
+      type: object
+      description: Serializer pour la mise à jour d'un profil KYC
+      properties:
+        first_name:
+          type: string
+          minLength: 1
+          title: Prénom
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          title: Nom de famille
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          title: Nom du milieu
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+          title: Date de naissance
+        place_of_birth:
+          type: string
+          minLength: 1
+          title: Lieu de naissance
+          maxLength: 200
+        nationality:
+          type: string
+          minLength: 1
+          title: Nationalité
+          maxLength: 100
+        gender:
+          allOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          title: Genre
+        address_line_1:
+          type: string
+          minLength: 1
+          title: Adresse ligne 1
+          maxLength: 200
+        address_line_2:
+          type: string
+          nullable: true
+          title: Adresse ligne 2
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          title: Ville
+          maxLength: 100
+        state_province:
+          type: string
+          minLength: 1
+          title: État/Province
+          maxLength: 100
+        postal_code:
+          type: string
+          minLength: 1
+          title: Code postal
+          maxLength: 20
+        country:
+          type: string
+          minLength: 1
+          title: Pays
+          maxLength: 100
+        identity_document_type:
+          allOf:
+          - $ref: '#/components/schemas/IdentityDocumentTypeEnum'
+          title: Type de document d'identité
+        identity_document_number:
+          type: string
+          minLength: 1
+          title: Numéro du document d'identité
+          maxLength: 50
+        identity_document_expiry:
+          type: string
+          format: date
+          nullable: true
+          title: Date d'expiration du document
+        identity_document_issuing_country:
+          type: string
+          minLength: 1
+          title: Pays d'émission du document
+          maxLength: 100
+        occupation:
+          type: string
+          minLength: 1
+          title: Profession
+          maxLength: 200
+        employer_name:
+          type: string
+          nullable: true
+          title: Nom de l'employeur
+          maxLength: 200
+        monthly_income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Revenus mensuels (FCFA)
+        source_of_funds:
+          allOf:
+          - $ref: '#/components/schemas/SourceOfFundsEnum'
+          title: Source des fonds
+    PriorityEnum:
+      enum:
+      - LOW
+      - MEDIUM
+      - HIGH
+      - CRITICAL
+      type: string
+      description: |-
+        * `LOW` - Faible (< 1M FCFA)
+        * `MEDIUM` - Moyenne (1M - 10M FCFA)
+        * `HIGH` - Élevée (10M - 50M FCFA)
+        * `CRITICAL` - Critique (> 50M FCFA)
+    RiskLevelEnum:
+      enum:
+      - LOW
+      - MEDIUM
+      - HIGH
+      - VERY_HIGH
+      type: string
+      description: |-
+        * `LOW` - Faible
+        * `MEDIUM` - Moyen
+        * `HIGH` - Élevé
+        * `VERY_HIGH` - Très élevé
+    RiskToleranceEnum:
+      enum:
+      - LOW
+      - MODERATE
+      - HIGH
+      type: string
+      description: |-
+        * `LOW` - Faible
+        * `MODERATE` - Modéré
+        * `HIGH` - Élevé
+    RoleEnum:
+      enum:
+      - CUSTOMER
+      - STUDENT
+      - SGI_MANAGER
+      - INSTRUCTOR
+      - SUPPORT
+      - ADMIN
+      type: string
+      description: |-
+        * `CUSTOMER` - Client/Épargnant
+        * `STUDENT` - Étudiant/Apprenant
+        * `SGI_MANAGER` - Manager SGI
+        * `INSTRUCTOR` - Instructeur/Formateur
+        * `SUPPORT` - Support Client
+        * `ADMIN` - Administrateur
+    SGI:
+      type: object
+      description: Serializer pour les SGI
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          title: Nom de la SGI
+          maxLength: 200
+        description:
+          type: string
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          title: Email principal
+          maxLength: 254
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        address:
+          type: string
+          title: Adresse
+        manager_name:
+          type: string
+          title: Nom du manager
+          maxLength: 100
+        manager_email:
+          type: string
+          format: email
+          title: Email du manager
+          maxLength: 254
+        manager_phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        min_investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant minimum d'investissement
+        max_investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Montant maximum d'investissement (optionnel)
+        historical_performance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          title: Performance historique (%)
+        management_fees:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          title: Frais de gestion (%)
+        entry_fees:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          title: Frais d'entrée (%)
+        is_active:
+          type: boolean
+          title: Active
+        is_verified:
+          type: boolean
+          title: Vérifiée
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - address
+      - created_at
+      - description
+      - email
+      - id
+      - manager_email
+      - manager_name
+      - min_investment_amount
+      - name
+      - updated_at
+    SGIList:
+      type: object
+      description: Serializer simplifié pour la liste des SGI
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          title: Nom de la SGI
+          maxLength: 200
+        description:
+          type: string
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        manager_name:
+          type: string
+          title: Nom du manager
+          maxLength: 100
+        manager_email:
+          type: string
+          format: email
+          title: Email du manager
+          maxLength: 254
+        min_investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          title: Montant minimum d'investissement
+        max_investment_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          nullable: true
+          title: Montant maximum d'investissement (optionnel)
+        historical_performance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          title: Performance historique (%)
+        management_fees:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          title: Frais de gestion (%)
+        is_active:
+          type: boolean
+          title: Active
+        is_verified:
+          type: boolean
+          title: Vérifiée
+      required:
+      - description
+      - id
+      - manager_email
+      - manager_name
+      - min_investment_amount
+      - name
+    SGIMatchingRequest:
+      type: object
+      description: Serializer pour les demandes de matching SGI
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        client_profile:
+          allOf:
+          - $ref: '#/components/schemas/ClientInvestmentProfile'
+          readOnly: true
+        matched_sgis:
+          type: object
+          additionalProperties: {}
+          title: SGI matchées
+          description: Liste des SGI avec leurs scores de compatibilité
+        total_matches:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+          title: Nombre de matches
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SGIMatchingStatusEnum'
+          title: Statut
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - client_profile
+      - completed_at
+      - created_at
+      - id
+    SGIMatchingStatusEnum:
+      enum:
+      - PENDING
+      - PROCESSING
+      - COMPLETED
+      - FAILED
+      type: string
+      description: |-
+        * `PENDING` - En attente
+        * `PROCESSING` - En cours de traitement
+        * `COMPLETED` - Terminé
+        * `FAILED` - Échec
+    SelfieVerificationStatusEnum:
+      enum:
+      - NOT_SUBMITTED
+      - SUBMITTED
+      - VERIFIED
+      - REJECTED
+      type: string
+      description: |-
+        * `NOT_SUBMITTED` - Non soumis
+        * `SUBMITTED` - Soumis
+        * `VERIFIED` - Vérifié
+        * `REJECTED` - Rejeté
+    SourceOfFundsEnum:
+      enum:
+      - SALARY
+      - BUSINESS
+      - INVESTMENT
+      - INHERITANCE
+      - GIFT
+      - OTHER
+      type: string
+      description: |-
+        * `SALARY` - Salaire
+        * `BUSINESS` - Activité commerciale
+        * `INVESTMENT` - Investissements
+        * `INHERITANCE` - Héritage
+        * `GIFT` - Don
+        * `OTHER` - Autre
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    User:
+      type: object
+      description: Serializer pour les utilisateurs
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          pattern: ^\+?1?\d{9,15}$
+          maxLength: 20
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        country_of_residence:
+          type: string
+          nullable: true
+          maxLength: 100
+        country_of_origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        is_verified:
+          type: boolean
+          readOnly: true
+          title: Compte vérifié
+        email_verified:
+          type: boolean
+        phone_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_verified
+      - updated_at
+      - username
+    UserRequest:
+      type: object
+      description: Serializer pour les utilisateurs
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          pattern: ^\+?1?\d{9,15}$
+          maxLength: 20
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        country_of_residence:
+          type: string
+          nullable: true
+          maxLength: 100
+        country_of_origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        email_verified:
+          type: boolean
+        phone_verified:
+          type: boolean
+      required:
+      - username
+    VerificationProviderEnum:
+      enum:
+      - SMILE_IDENTITY
+      - ONFIDO
+      - COMPLY_ADVANTAGE
+      - MANUAL
+      type: string
+      description: |-
+        * `SMILE_IDENTITY` - Smile Identity
+        * `ONFIDO` - Onfido
+        * `COMPLY_ADVANTAGE` - ComplyAdvantage
+        * `MANUAL` - Vérification manuelle
+    VerificationStatusEnum:
+      enum:
+      - PENDING
+      - PROCESSING
+      - VERIFIED
+      - REJECTED
+      - EXPIRED
+      type: string
+      description: |-
+        * `PENDING` - En attente
+        * `PROCESSING` - En cours de traitement
+        * `VERIFIED` - Vérifié
+        * `REJECTED` - Rejeté
+        * `EXPIRED` - Expiré
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Authentication
+  description: Endpoints d'authentification multi-rôles (inscription, connexion, OTP,
+    tokens)
+- name: KYC
+  description: Gestion du profil KYC, documents et vérifications
+- name: SGI
+  description: Gestion des Sociétés de Gestion d'Investissement et matching
+- name: Savings Challenge
+  description: Défis d'épargne gamifiés, objectifs et comptes virtuels
+- name: Learning
+  description: E-learning, parcours de formation, quiz et certifications
+- name: Trading
+  description: Gestion de portefeuilles, ordres et analytics de trading
+- name: Notifications
+  description: Système de notifications multi-canal et campagnes
+- name: Analytics
+  description: Reporting, statistiques et business intelligence
+- name: Admin
+  description: Endpoints d'administration et gestion système

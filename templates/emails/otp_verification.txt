@@ -1,0 +1,26 @@
+{{ company_name }} - Code de vérification
+
+Bonjour {{ first_name }},
+
+Merci de vous être inscrit sur XAMILA ! Pour finaliser la création de votre compte, veuillez utiliser le code de vérification ci-dessous :
+
+CODE DE VÉRIFICATION : {{ otp_code }}
+
+IMPORTANT :
+- Ce code expire dans {{ validity_minutes }} minutes
+- Ne partagez jamais ce code avec qui que ce soit
+- Notre équipe ne vous demandera jamais ce code par téléphone
+
+Si vous n'avez pas demandé ce code, ignorez simplement cet email.
+
+Une fois votre compte activé, vous pourrez :
+- Compléter votre profil KYC
+- Accéder aux services d'investissement
+- Être mis en relation avec des SGI
+- Suivre vos investissements
+
+Cordialement,
+L'équipe {{ company_name }}
+
+---
+Cet email a été envoyé automatiquement, merci de ne pas y répondre.
