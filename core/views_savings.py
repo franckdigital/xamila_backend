@@ -90,10 +90,10 @@ def savings_transactions(request):
     """Récupère l'historique des transactions d'épargne"""
     
     try:
-        # Pour test temporaire, utiliser l'utilisateur test
-        user = User.objects.get(email="test@xamila.com")
+        # Utiliser l'utilisateur authentifié depuis le token JWT
+        user = request.user
         limit = int(request.GET.get('limit', 10))
-        logger.info(f"Savings transactions request for test user: {user.email}, limit: {limit}")
+        logger.info(f"Savings transactions request for user: {user.email}, limit: {limit}")
         
         # Récupérer les dépôts récents
         deposits = SavingsDeposit.objects.filter(
