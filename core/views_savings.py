@@ -22,9 +22,9 @@ def savings_account(request):
     """Récupère le compte d'épargne principal de l'utilisateur"""
     
     try:
-        # Pour test temporaire, utiliser l'utilisateur test
-        user = User.objects.get(email="test@xamila.com")
-        logger.info(f"Savings account request for test user: {user.email}")
+        # Utiliser l'utilisateur authentifié depuis le token JWT
+        user = request.user
+        logger.info(f"Savings account request for user: {user.email}")
         
         # Récupérer le compte d'épargne principal
         savings_account = SavingsAccount.objects.filter(
