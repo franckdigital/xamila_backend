@@ -3471,3 +3471,7 @@ Traceback (most recent call last):
     self.wrapped.flush()
 OSError: [Errno 22] Invalid argument
 ERROR 2025-08-23 16:24:17,859 basehttp 3368 9976 "OPTIONS /api/auth/login/ HTTP/1.1" 500 88919
+INFO 2025-08-24 22:47:23,213 autoreload 13852 15912 Watching for file changes with StatReloader
+INFO 2025-08-24 22:49:31,135 autoreload 12892 16564 Watching for file changes with StatReloader
+INFO 2025-08-24 22:52:00,158 autoreload 5824 12868 Watching for file changes with StatReloader
+INFO 2025-08-24 22:53:28,918 autoreload 11976 20332 Watching for file changes with StatReloader
