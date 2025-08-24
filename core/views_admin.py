@@ -587,7 +587,7 @@ def admin_challenges(request):
                 'description': challenge.description,
                 'target_amount': float(challenge.target_amount),
                 'minimum_deposit': float(challenge.minimum_deposit),
-                'duration_months': challenge.duration_months,
+                'duration_days': challenge.duration_days,
                 'start_date': challenge.start_date.isoformat(),
                 'end_date': challenge.end_date.isoformat(),
                 'status': challenge.status,
@@ -608,7 +608,7 @@ def admin_challenges(request):
                 description=data['description'],
                 target_amount=data['target_amount'],
                 minimum_deposit=data['minimum_deposit'],
-                duration_months=data.get('duration_months', 6),
+                duration_days=data.get('duration_days', 180),
                 start_date=data['start_date'],
                 end_date=data['end_date'],
                 status=data.get('status', 'ACTIVE')
@@ -622,7 +622,7 @@ def admin_challenges(request):
                 'description': challenge.description,
                 'target_amount': float(challenge.target_amount),
                 'minimum_deposit': float(challenge.minimum_deposit),
-                'duration_months': challenge.duration_months,
+                'duration_days': challenge.duration_days,
                 'start_date': challenge.start_date.isoformat(),
                 'end_date': challenge.end_date.isoformat(),
                 'status': challenge.status,
@@ -685,7 +685,7 @@ def admin_challenge_detail(request, challenge_id):
             'description': challenge.description,
             'target_amount': float(challenge.target_amount),
             'minimum_deposit': float(challenge.minimum_deposit),
-            'duration_months': challenge.duration_months,
+            'duration_days': challenge.duration_days,
             'start_date': challenge.start_date.isoformat(),
             'end_date': challenge.end_date.isoformat(),
             'status': challenge.status,
@@ -705,7 +705,7 @@ def admin_challenge_detail(request, challenge_id):
             challenge.description = data.get('description', challenge.description)
             challenge.target_amount = data.get('target_amount', challenge.target_amount)
             challenge.minimum_deposit = data.get('minimum_deposit', challenge.minimum_deposit)
-            challenge.duration_months = data.get('duration_months', challenge.duration_months)
+            challenge.duration_days = data.get('duration_days', challenge.duration_days)
             challenge.start_date = data.get('start_date', challenge.start_date)
             challenge.end_date = data.get('end_date', challenge.end_date)
             challenge.status = data.get('status', challenge.status)
@@ -719,7 +719,7 @@ def admin_challenge_detail(request, challenge_id):
                 'description': challenge.description,
                 'target_amount': float(challenge.target_amount),
                 'minimum_deposit': float(challenge.minimum_deposit),
-                'duration_months': challenge.duration_months,
+                'duration_days': challenge.duration_days,
                 'start_date': challenge.start_date.isoformat(),
                 'end_date': challenge.end_date.isoformat(),
                 'status': challenge.status,
