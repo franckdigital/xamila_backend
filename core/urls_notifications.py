@@ -4,7 +4,7 @@ Endpoints REST pour la gestion des notifications
 """
 
 from django.urls import path
-from . import views_notifications_basic as views_notifications
+from . import views_notifications
 
 app_name = 'notifications'
 
