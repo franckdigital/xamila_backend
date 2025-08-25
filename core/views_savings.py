@@ -206,6 +206,8 @@ def savings_deposit(request):
     try:
         # Utiliser l'utilisateur authentifié depuis le token JWT
         user = request.user
+        logger.info(f"=== DEPOSIT ENDPOINT CALLED === User: {user.email}")
+        logger.info(f"Request data: {request.data}")
         logger.info(f"Savings deposit request for user: {user.email}")
         
         # Récupérer les données du dépôt
