@@ -314,8 +314,9 @@ def savings_deposit(request):
         # Créer une notification pour le dépôt
         try:
             from .utils_notifications import create_notification
-            logger.info(f"Creating notification for deposit: {deposit.id}")
-            create_notification(
+            logger.info(f"Creating notification for deposit: {deposit.id} for user: {user.email}")
+            
+            notification = create_notification(
                 recipient=user,
                 subject="Dépôt confirmé",
                 message=f"Votre dépôt de {montant:,} FCFA a été confirmé avec succès. Nouveau solde: {nouveau_solde} FCFA",
@@ -328,7 +329,7 @@ def savings_deposit(request):
                     'reference': deposit.transaction_reference
                 }
             )
-            logger.info(f"Notification created successfully for user: {user.email}")
+            logger.info(f"Notification created successfully: ID={notification.id}, User={user.email}, Status={notification.status}")
         except Exception as e:
             logger.error(f"Failed to create notification for deposit: {str(e)}")
             import traceback
