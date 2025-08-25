@@ -311,6 +311,25 @@ def savings_deposit(request):
         else:
             nouveau_solde = str(montant)
         
+        # Créer une notification pour le dépôt
+        try:
+            from .utils_notifications import create_notification
+            create_notification(
+                recipient=user,
+                subject="Dépôt confirmé",
+                message=f"Votre dépôt de {montant:,} FCFA a été confirmé avec succès. Nouveau solde: {nouveau_solde} FCFA",
+                notification_type='IN_APP',
+                priority='MEDIUM',
+                data={
+                    'deposit_id': deposit.id,
+                    'amount': str(montant),
+                    'new_balance': nouveau_solde,
+                    'reference': deposit.transaction_reference
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create notification for deposit: {str(e)}")
+        
         response_data = {
             'success': True,
             'message': f'Dépôt de {montant:,} FCFA effectué avec succès',
