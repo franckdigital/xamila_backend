@@ -41,6 +41,10 @@ class CustomerRegistrationSerializer(serializers.Serializer):
         max_length=30,
         help_text="Nom de famille du client"
     )
+    username = serializers.CharField(
+        max_length=150,
+        help_text="Nom d'utilisateur unique"
+    )
     user_type = serializers.CharField(
         default='CUSTOMER',
         help_text="Type d'utilisateur"
@@ -97,6 +101,19 @@ class CustomerRegistrationSerializer(serializers.Serializer):
         
         return value
 
+    def validate_username(self, value):
+        """Valide le nom d'utilisateur"""
+        if len(value) < 3:
+            raise serializers.ValidationError("Le nom d'utilisateur doit contenir au moins 3 caractères.")
+        
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise serializers.ValidationError("Le nom d'utilisateur ne peut contenir que des lettres, chiffres et underscores.")
+        
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Ce nom d'utilisateur est déjà utilisé.")
+        
+        return value
+
     def validate(self, data):
         """Validation globale des données"""
         if data['password'] != data['password_confirm']:
@@ -110,20 +127,9 @@ class CustomerRegistrationSerializer(serializers.Serializer):
         # Supprimer password_confirm des données validées
         validated_data.pop('password_confirm', None)
         
-        # Créer le nom d'utilisateur à partir de l'email
-        email = validated_data['email']
-        username = email.split('@')[0]
-        
-        # S'assurer que le username est unique
-        counter = 1
-        original_username = username
-        while User.objects.filter(username=username).exists():
-            username = f"{original_username}{counter}"
-            counter += 1
-        
         # Créer l'utilisateur
         user = User.objects.create_user(
-            username=username,
+            username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=validated_data['first_name'],
