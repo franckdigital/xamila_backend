@@ -23,11 +23,12 @@ urlpatterns = [
     # === NOTIFICATIONS ===
     path('', views_notifications.NotificationListView.as_view(), name='notification-list'),
     path('<uuid:pk>/', views_notifications.NotificationDetailView.as_view(), name='notification-detail'),
-    path('<uuid:notification_id>/mark-read/', views_notifications.mark_as_read, name='mark-as-read'),
-    path('mark-all-read/', views_notifications.mark_all_as_read, name='mark-all-as-read'),
+    path('<uuid:notification_id>/mark-read/', views_notifications.mark_notification_as_read, name='mark-as-read'),
+    path('mark-all-read/', views_notifications.mark_all_notifications_as_read, name='mark-all-as-read'),
     
     # === USER NOTIFICATIONS ===
     path('user/notifications/', views_notifications.user_notifications, name='user-notifications'),
+    path('user/count/', views_notifications.notification_count, name='notification-count'),
     path('user/preferences/', views_notifications.NotificationPreferenceView.as_view(), name='user-preferences'),
     
     # === WEBHOOKS ===

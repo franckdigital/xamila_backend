@@ -247,7 +247,8 @@ class NotificationPreferenceView(generics.RetrieveUpdateAPIView):
 def user_notifications(request):
     """Notifications de l'utilisateur connecté"""
     notifications = Notification.objects.filter(
-        recipient=request.user
+        recipient=request.user,
+        notification_type='IN_APP'
     ).select_related('campaign').order_by('-created_at')
     
     # Filtres
@@ -265,6 +266,7 @@ def user_notifications(request):
     
     unread_count = Notification.objects.filter(
         recipient=request.user,
+        notification_type='IN_APP',
         opened_at__isnull=True
     ).count()
     
@@ -281,6 +283,60 @@ def user_notifications(request):
             'total_count': total_count
         }
     })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_notification_as_read(request, notification_id):
+    """Marquer une notification comme lue"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipient=request.user
+        )
+        if not notification.opened_at:
+            notification.opened_at = timezone.now()
+            notification.status = 'OPENED'
+            notification.save()
+        
+        return Response({'success': True, 'message': 'Notification marquée comme lue'})
+    except Notification.DoesNotExist:
+        return Response(
+            {'error': 'Notification non trouvée'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_all_notifications_as_read(request):
+    """Marquer toutes les notifications comme lues"""
+    updated_count = Notification.objects.filter(
+        recipient=request.user,
+        notification_type='IN_APP',
+        opened_at__isnull=True
+    ).update(
+        opened_at=timezone.now(),
+        status='OPENED'
+    )
+    
+    return Response({
+        'success': True, 
+        'message': f'{updated_count} notifications marquées comme lues'
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def notification_count(request):
+    """Nombre de notifications non lues"""
+    unread_count = Notification.objects.filter(
+        recipient=request.user,
+        notification_type='IN_APP',
+        opened_at__isnull=True
+    ).count()
+    
+    return Response({'unread_count': unread_count})
 
 
 class WebhookEndpointListView(generics.ListCreateAPIView):
