@@ -94,14 +94,13 @@ def monthly_savings_progress(request):
     # Importer ici pour éviter les imports circulaires
     from .models_savings_challenge import SavingsDeposit, ChallengeParticipation
     
-    # Calculer le total des dépôts du mois actuel depuis les transactions de Ma Caisse
+    # Calculer le total des dépôts du mois actuel depuis les dépôts d'épargne
     from django.db import models
-    from .models import SavingsTransaction
+    from .models_savings_challenge import SavingsDeposit
     
-    monthly_deposits = SavingsTransaction.objects.filter(
-        user=user,
-        type='deposit',
-        status='confirmed',
+    monthly_deposits = SavingsDeposit.objects.filter(
+        participation__user=user,
+        status='CONFIRMED',
         created_at__gte=current_month_start,
         created_at__lt=next_month_start
     ).aggregate(
