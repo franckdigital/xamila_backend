@@ -9,6 +9,17 @@ from rest_framework import status
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+
+def get_french_month_year():
+    """Retourne le mois et l'année en français"""
+    months_fr = {
+        1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+        5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+        9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+    }
+    now = timezone.now()
+    return f"{months_fr[now.month]} {now.year}"
+
 from .models import User
 from .serializers import UserSerializer
 
@@ -117,6 +128,6 @@ def monthly_savings_progress(request):
         'current_savings': float(monthly_deposits),
         'progress_percentage': round(float(progress_percentage), 2),
         'remaining_amount': float(max(0, user.monthly_savings_goal - monthly_deposits)),
-        'current_month': timezone.now().strftime('%B %Y'),
+        'current_month': get_french_month_year(),
         'days_remaining': (next_month_start - timezone.now()).days
     })
