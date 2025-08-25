@@ -92,6 +92,18 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     
+    # Objectif d'épargne mensuel
+    monthly_savings_goal = models.DecimalField(
+        max_digits=15, decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Objectif d'épargne mensuel (FCFA)"
+    )
+    monthly_goal_set_date = models.DateTimeField(
+        blank=True, null=True,
+        verbose_name="Date de définition de l'objectif mensuel"
+    )
+    
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

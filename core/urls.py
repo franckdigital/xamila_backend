@@ -74,6 +74,9 @@ urlpatterns = [
     # Savings URLs
     path('savings/', include('core.urls_savings')),
     
+    # Savings Goal URLs
+    path('savings-goal/', include('core.urls_savings_goal')),
+    
     # === ENDPOINTS ADMIN ===
     
     # Dashboard admin

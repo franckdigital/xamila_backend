@@ -3501,3 +3501,19 @@ INFO 2025-08-24 23:10:57,579 autoreload 17764 15940 Watching for file changes wi
 INFO 2025-08-24 23:11:01,272 autoreload 15964 8448 Watching for file changes with StatReloader
 INFO 2025-08-24 23:11:01,467 autoreload 2012 17072 Watching for file changes with StatReloader
 INFO 2025-08-24 23:11:01,546 autoreload 19692 4840 Watching for file changes with StatReloader
+INFO 2025-08-24 23:56:12,928 autoreload 15964 8448 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-24 23:56:13,398 autoreload 17764 15940 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-24 23:56:13,700 autoreload 19692 4840 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-24 23:56:13,708 autoreload 2012 17072 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-24 23:56:23,214 autoreload 11980 11300 Watching for file changes with StatReloader
+INFO 2025-08-24 23:56:23,347 autoreload 17924 17316 Watching for file changes with StatReloader
+INFO 2025-08-24 23:56:23,379 autoreload 5160 7888 Watching for file changes with StatReloader
+INFO 2025-08-24 23:56:23,780 autoreload 19584 12080 Watching for file changes with StatReloader
+INFO 2025-08-24 23:58:05,723 autoreload 19584 12080 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls.py changed, reloading.
+INFO 2025-08-24 23:58:05,754 autoreload 5160 7888 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls.py changed, reloading.
+INFO 2025-08-24 23:58:05,758 autoreload 11980 11300 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls.py changed, reloading.
+INFO 2025-08-24 23:58:05,928 autoreload 17924 17316 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls.py changed, reloading.
+INFO 2025-08-24 23:58:14,951 autoreload 3268 12968 Watching for file changes with StatReloader
+INFO 2025-08-24 23:58:15,488 autoreload 8872 6436 Watching for file changes with StatReloader
+INFO 2025-08-24 23:58:15,722 autoreload 15952 18068 Watching for file changes with StatReloader
+INFO 2025-08-24 23:58:15,926 autoreload 19312 6380 Watching for file changes with StatReloader
