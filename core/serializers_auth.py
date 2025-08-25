@@ -23,8 +23,14 @@ class CustomerRegistrationSerializer(serializers.Serializer):
         min_length=8,
         help_text="Mot de passe sécurisé (minimum 8 caractères)"
     )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        help_text="Confirmation du mot de passe"
+    )
     phone = serializers.CharField(
         max_length=20,
+        required=False,
+        allow_blank=True,
         help_text="Numéro de téléphone au format international (+33...)"
     )
     first_name = serializers.CharField(
@@ -34,6 +40,30 @@ class CustomerRegistrationSerializer(serializers.Serializer):
     last_name = serializers.CharField(
         max_length=30,
         help_text="Nom de famille du client"
+    )
+    user_type = serializers.CharField(
+        default='CUSTOMER',
+        help_text="Type d'utilisateur"
+    )
+    age_range = serializers.CharField(
+        max_length=20,
+        help_text="Tranche d'âge"
+    )
+    gender = serializers.CharField(
+        max_length=1,
+        help_text="Genre (M/F)"
+    )
+    country = serializers.CharField(
+        max_length=2,
+        help_text="Pays (ancien champ)"
+    )
+    country_of_residence = serializers.CharField(
+        max_length=2,
+        help_text="Pays de résidence"
+    )
+    country_of_origin = serializers.CharField(
+        max_length=2,
+        help_text="Pays d'origine"
     )
 
     def validate_email(self, value):
@@ -52,6 +82,9 @@ class CustomerRegistrationSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         """Valide le format du numéro de téléphone"""
+        if not value:  # Phone is optional
+            return value
+            
         # Format international requis
         if not re.match(r'^\+[1-9]\d{1,14}$', value):
             raise serializers.ValidationError(
@@ -63,6 +96,50 @@ class CustomerRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Ce numéro de téléphone est déjà utilisé.")
         
         return value
+
+    def validate(self, data):
+        """Validation globale des données"""
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError({
+                'password_confirm': 'Les mots de passe ne correspondent pas.'
+            })
+        return data
+
+    def create(self, validated_data):
+        """Crée un nouvel utilisateur client"""
+        # Supprimer password_confirm des données validées
+        validated_data.pop('password_confirm', None)
+        
+        # Créer le nom d'utilisateur à partir de l'email
+        email = validated_data['email']
+        username = email.split('@')[0]
+        
+        # S'assurer que le username est unique
+        counter = 1
+        original_username = username
+        while User.objects.filter(username=username).exists():
+            username = f"{original_username}{counter}"
+            counter += 1
+        
+        # Créer l'utilisateur
+        user = User.objects.create_user(
+            username=username,
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            phone=validated_data.get('phone', ''),
+            role=validated_data.get('user_type', 'CUSTOMER'),
+            age_range=validated_data.get('age_range', ''),
+            gender=validated_data.get('gender', ''),
+            country=validated_data.get('country', ''),
+            country_of_residence=validated_data.get('country_of_residence', ''),
+            country_of_origin=validated_data.get('country_of_origin', ''),
+            is_active=False,  # Sera activé après vérification OTP
+            email_verified=False
+        )
+        
+        return user
 
 
 class CustomerRegistrationResponseSerializer(serializers.Serializer):
