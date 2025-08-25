@@ -23,13 +23,9 @@ logger = logging.getLogger(__name__)
 def customer_dashboard_metrics(request):
     """Dashboard pour les clients CUSTOMER avec données dynamiques de la BD"""
     
-    # Pour test temporaire, utiliser l'utilisateur test
-    try:
-        user = User.objects.get(email="test@xamila.com")
-        logger.info(f"Dashboard request for test user: {user.email}")
-    except User.DoesNotExist:
-        logger.error("Test user not found")
-        return Response({'error': 'Test user not found'}, status=status.HTTP_404_NOT_FOUND)
+    # Utiliser l'utilisateur authentifié
+    user = request.user
+    logger.info(f"Dashboard request for user: {user.email}")
     
     # Récupérer les données réelles depuis la base de données
     from .models_savings_challenge import ChallengeParticipation, SavingsAccount, SavingsGoal
@@ -95,13 +91,9 @@ def customer_dashboard_metrics(request):
 def savings_challenges_list(request):
     """Liste des défis d'épargne avec données dynamiques de la BD"""
     
-    # Pour test temporaire, utiliser l'utilisateur test
-    try:
-        user = User.objects.get(email="test@xamila.com")
-        logger.info(f"Challenges request for test user: {user.email}")
-    except User.DoesNotExist:
-        logger.error("Test user not found")
-        return Response({'error': 'Test user not found'}, status=status.HTTP_404_NOT_FOUND)
+    # Utiliser l'utilisateur authentifié
+    user = request.user
+    logger.info(f"Challenges request for user: {user.email}")
     
     from .models_savings_challenge import SavingsChallenge, ChallengeParticipation
     
@@ -182,14 +174,10 @@ def savings_challenges_list(request):
 def savings_deposits_list(request):
     """Liste des dépôts récents avec données dynamiques de la BD"""
     
-    # Pour test temporaire, utiliser l'utilisateur test
-    try:
-        user = User.objects.get(email="test@xamila.com")
-        limit = int(request.GET.get('limit', 5))
-        logger.info(f"Deposits request for test user: {user.email}, limit: {limit}")
-    except User.DoesNotExist:
-        logger.error("Test user not found")
-        return Response({'error': 'Test user not found'}, status=status.HTTP_404_NOT_FOUND)
+    # Utiliser l'utilisateur authentifié
+    user = request.user
+    limit = int(request.GET.get('limit', 5))
+    logger.info(f"Deposits request for user: {user.email}, limit: {limit}")
     
     from .models_savings_challenge import SavingsDeposit, ChallengeParticipation
     

@@ -30,8 +30,8 @@ urlpatterns = [
     # === ENDPOINTS LEARNING === (Temporairement désactivé - vues en cours de développement)
     # path('learning/', include('core.urls_learning')),
     
-    # === ENDPOINTS NOTIFICATIONS === (Temporairement désactivé - vues en cours de développement)
-    # path('notifications/', include('core.urls_notifications')),
+    # === ENDPOINTS NOTIFICATIONS ===
+    path('notifications/', include('core.urls_notifications')),
     
     # === ENDPOINTS SAVINGS CHALLENGE === (Temporairement désactivé - vues en cours de développement)
     # path('savings/', include('core.urls_savings_challenge')),
