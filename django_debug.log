@@ -3561,3 +3561,7 @@ INFO 2025-08-25 01:27:24,125 autoreload 1776 20220 C:\Users\kfran\CascadeProject
 INFO 2025-08-25 01:27:24,241 autoreload 7896 9660 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\0010_remove_savingsdeposit_user.py changed, reloading.
 INFO 2025-08-25 01:27:24,357 autoreload 6420 17820 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\0010_remove_savingsdeposit_user.py changed, reloading.
 INFO 2025-08-25 01:27:24,493 autoreload 18848 16448 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\0010_remove_savingsdeposit_user.py changed, reloading.
+INFO 2025-08-25 01:27:30,176 autoreload 12508 5752 Watching for file changes with StatReloader
+INFO 2025-08-25 01:27:30,193 autoreload 11520 5216 Watching for file changes with StatReloader
+INFO 2025-08-25 01:27:30,194 autoreload 2628 17260 Watching for file changes with StatReloader
+INFO 2025-08-25 01:27:30,722 autoreload 17476 4108 Watching for file changes with StatReloader
