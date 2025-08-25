@@ -744,3 +744,291 @@ def admin_challenge_detail(request, challenge_id):
         return Response({
             'message': 'Défi supprimé avec succès'
         }, status=status.HTTP_204_NO_CONTENT)
+
+
+# ===== GESTION DES UTILISATEURS - ENDPOINTS SUPPLÉMENTAIRES =====
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_create_user(request):
+    """
+    Créer un nouvel utilisateur depuis l'admin
+    POST /api/admin/users/create/
+    """
+    data = request.data
+    
+    try:
+        # Vérifier si l'utilisateur existe déjà
+        if User.objects.filter(username=data['username']).exists():
+            return Response({
+                'error': 'Ce nom d\'utilisateur existe déjà'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if User.objects.filter(email=data['email']).exists():
+            return Response({
+                'error': 'Cet email est déjà utilisé'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Créer l'utilisateur
+        user = User.objects.create_user(
+            username=data['username'],
+            email=data['email'],
+            password=data['password'],
+            first_name=data.get('first_name', ''),
+            last_name=data.get('last_name', ''),
+            phone=data.get('phone', ''),
+            role=data.get('role', 'CUSTOMER'),
+            age_range=data.get('age_range', ''),
+            gender=data.get('gender', ''),
+            country=data.get('country', ''),
+            country_of_residence=data.get('country_of_residence', ''),
+            country_of_origin=data.get('country_of_origin', ''),
+            is_active=data.get('is_active', True),
+            email_verified=data.get('email_verified', False)
+        )
+        
+        return Response({
+            'message': 'Utilisateur créé avec succès',
+            'user': UserSerializer(user).data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'error': f'Erreur lors de la création: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAdminUser])
+def admin_update_user(request, user_id):
+    """
+    Modifier un utilisateur depuis l'admin
+    PUT /api/admin/users/{id}/update/
+    """
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({
+            'error': 'Utilisateur non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    data = request.data
+    
+    try:
+        # Vérifier l'unicité du nom d'utilisateur et email
+        if 'username' in data and data['username'] != user.username:
+            if User.objects.filter(username=data['username']).exists():
+                return Response({
+                    'error': 'Ce nom d\'utilisateur existe déjà'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            user.username = data['username']
+        
+        if 'email' in data and data['email'] != user.email:
+            if User.objects.filter(email=data['email']).exists():
+                return Response({
+                    'error': 'Cet email est déjà utilisé'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            user.email = data['email']
+        
+        # Mettre à jour les autres champs
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'role' in data:
+            user.role = data['role']
+        if 'age_range' in data:
+            user.age_range = data['age_range']
+        if 'gender' in data:
+            user.gender = data['gender']
+        if 'country' in data:
+            user.country = data['country']
+        if 'country_of_residence' in data:
+            user.country_of_residence = data['country_of_residence']
+        if 'country_of_origin' in data:
+            user.country_of_origin = data['country_of_origin']
+        if 'is_active' in data:
+            user.is_active = data['is_active']
+        if 'email_verified' in data:
+            user.email_verified = data['email_verified']
+        
+        # Changer le mot de passe si fourni
+        if 'password' in data and data['password']:
+            user.set_password(data['password'])
+        
+        user.save()
+        
+        return Response({
+            'message': 'Utilisateur mis à jour avec succès',
+            'user': UserSerializer(user).data
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': f'Erreur lors de la mise à jour: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def admin_delete_user(request, user_id):
+    """
+    Supprimer un utilisateur depuis l'admin
+    DELETE /api/admin/users/{id}/delete/
+    """
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({
+            'error': 'Utilisateur non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Vérifier si l'utilisateur peut être supprimé
+    if user.role == 'ADMIN' and User.objects.filter(role='ADMIN').count() == 1:
+        return Response({
+            'error': 'Impossible de supprimer le dernier administrateur'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Vérifier s'il y a des données liées
+    if user.role == 'SGI_MANAGER':
+        sgi_count = SGI.objects.filter(manager=user).count()
+        if sgi_count > 0:
+            return Response({
+                'error': f'Impossible de supprimer cet utilisateur car il gère {sgi_count} SGI(s)'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    username = user.username
+    user.delete()
+    
+    return Response({
+        'message': f'Utilisateur {username} supprimé avec succès'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_toggle_user_status(request, user_id):
+    """
+    Activer/Désactiver un utilisateur
+    POST /api/admin/users/{id}/toggle-status/
+    """
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({
+            'error': 'Utilisateur non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    new_status = request.data.get('is_active', not user.is_active)
+    user.is_active = new_status
+    user.save()
+    
+    return Response({
+        'message': f'Utilisateur {"activé" if new_status else "désactivé"} avec succès',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'is_active': user.is_active
+        }
+    })
+
+
+# ===== GESTION DES PERMISSIONS ET RÔLES =====
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAdminUser])
+def admin_role_permissions(request):
+    """
+    Gestion des permissions par rôle
+    GET /api/admin/role-permissions/ - Obtenir les permissions par rôle
+    POST /api/admin/role-permissions/ - Modifier une permission
+    """
+    # Permissions par défaut pour chaque rôle
+    default_permissions = {
+        'CUSTOMER': [
+            'dashboard.view',
+            'savings.plans',
+            'savings.challenges',
+            'portfolio.view',
+            'sgi.access',
+            'training.bourse'
+        ],
+        'SGI_MANAGER': [
+            'dashboard.view',
+            'dashboard.sgi_manager',
+            'sgi.view',
+            'sgi.manage',
+            'sgi.clients',
+            'savings.plans',
+            'portfolio.view'
+        ],
+        'INSTRUCTOR': [
+            'dashboard.view',
+            'dashboard.instructor',
+            'training.bourse',
+            'training.create',
+            'training.manage'
+        ],
+        'SUPPORT': [
+            'dashboard.view',
+            'dashboard.support',
+            'support.tickets',
+            'support.respond',
+            'users.view'
+        ],
+        'ADMIN': [
+            'dashboard.view',
+            'dashboard.admin',
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            'sgi.view',
+            'sgi.manage',
+            'training.bourse',
+            'training.create',
+            'training.manage',
+            'support.tickets',
+            'support.respond',
+            'savings.plans',
+            'savings.challenges',
+            'portfolio.view',
+            'sgi.access',
+            'sgi.clients'
+        ]
+    }
+    
+    if request.method == 'GET':
+        # Retourner les permissions par rôle
+        role_permissions = []
+        for role_code, role_name in User.ROLE_CHOICES:
+            role_permissions.append({
+                'role': role_code,
+                'role_name': role_name,
+                'permissions': default_permissions.get(role_code, [])
+            })
+        
+        return Response(role_permissions)
+    
+    elif request.method == 'POST':
+        # Modifier une permission (pour l'instant, on simule juste la réponse)
+        role = request.data.get('role')
+        permission = request.data.get('permission')
+        enabled = request.data.get('enabled', True)
+        
+        if role not in dict(User.ROLE_CHOICES):
+            return Response({
+                'error': 'Rôle invalide'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # TODO: Implémenter la sauvegarde réelle des permissions en base
+        # Pour l'instant, on retourne juste un succès
+        
+        return Response({
+            'message': f'Permission {permission} {"accordée" if enabled else "révoquée"} pour le rôle {role}',
+            'role': role,
+            'permission': permission,
+            'enabled': enabled
+        })
