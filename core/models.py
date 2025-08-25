@@ -83,7 +83,35 @@ class User(AbstractUser):
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CUSTOMER')
     
-    # Pays
+    # Nouvelles informations démographiques
+    AGE_RANGE_CHOICES = [
+        ('moins_de_18', 'Moins de 18 ans'),
+        ('18_24', '18-24 ans'),
+        ('25_35', '25-35 ans'),
+        ('36_45', '36-45 ans'),
+        ('46_55', '46-55 ans'),
+        ('plus_de_55', 'Plus de 55 ans'),
+    ]
+    
+    GENDER_CHOICES = [
+        ('masculin', 'Masculin'),
+        ('feminin', 'Féminin'),
+    ]
+    
+    age_range = models.CharField(
+        max_length=20, choices=AGE_RANGE_CHOICES, blank=True, null=True,
+        verbose_name="Tranche d'âge"
+    )
+    gender = models.CharField(
+        max_length=10, choices=GENDER_CHOICES, blank=True, null=True,
+        verbose_name="Genre"
+    )
+    country = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="Pays de résidence"
+    )
+    
+    # Pays (anciens champs - à conserver pour compatibilité)
     country_of_residence = models.CharField(max_length=100, blank=True, null=True)
     country_of_origin = models.CharField(max_length=100, blank=True, null=True)
     

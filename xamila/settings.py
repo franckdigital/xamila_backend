@@ -152,7 +152,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images )
+# Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
@@ -464,9 +464,10 @@ CORS_ALLOWED_METHODS = [
     'PUT',
 ]
 
-# Autoriser toutes les origines pour résoudre les problèmes CORS
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+# Pour le développement uniquement - autoriser toutes les origines
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
 
 # ================================
 # LOGGING CONFIGURATION
