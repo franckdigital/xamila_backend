@@ -10,6 +10,9 @@ from datetime import timedelta
 
 # Les imports des modèles spécialisés seront ajoutés après la définition du User
 
+# Import des modèles de permissions
+from .models_permissions import Permission, RolePermission
+
 
 class UserManager(BaseUserManager):
     """Manager personnalisé pour le modèle User"""

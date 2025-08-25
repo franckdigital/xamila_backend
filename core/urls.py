@@ -1,6 +1,15 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from . import views_auth
+from . import views_admin
+from . import views_customer
+from . import views_sgi_manager
+from . import views_trading
+from . import views_learning
+from . import views_savings_goal
+from . import views_notifications
+from . import views_permissions
 
 # Router pour les ViewSets (si nécessaire plus tard)
 router = DefaultRouter()
@@ -30,8 +39,12 @@ urlpatterns = [
     # === ENDPOINTS LEARNING === (Temporairement désactivé - vues en cours de développement)
     # path('learning/', include('core.urls_learning')),
     
-    # === ENDPOINTS NOTIFICATIONS ===
+    # === ENDPOINTS NOTIFICATIONS    # Notifications
     path('notifications/', include('core.urls_notifications')),
+    
+    # User permissions
+    path('user/permissions/', views_permissions.UserPermissionsView.as_view(), name='user_permissions'),
+    path('user/permissions/check/<str:permission_code>/', views_permissions.check_permission, name='check_permission'),
     
     # === ENDPOINTS SAVINGS CHALLENGE === (Temporairement désactivé - vues en cours de développement)
     # path('savings/', include('core.urls_savings_challenge')),

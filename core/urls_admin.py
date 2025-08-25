@@ -7,6 +7,7 @@ Back-office pour administrateurs et managers SGI
 from django.urls import path
 from . import views_admin
 from . import views_admin_advanced
+from . import views_permissions
 
 urlpatterns = [
     # ===== GESTION DES UTILISATEURS =====
@@ -16,14 +17,18 @@ urlpatterns = [
     path('users/<uuid:pk>/', views_admin.AdminUserDetailView.as_view(), name='admin_user_detail'),
     path('users/<uuid:user_id>/action/', views_admin.admin_user_action, name='admin_user_action'),
     
+    # Role permission management endpoints
+    path('role-permissions/', views_admin.admin_role_permissions, name='admin_role_permissions'),
+    path('permissions/update/', views_permissions.admin_update_role_permission, name='admin_update_role_permission'),
+    
+    # User permissions endpoints
+    path('permissions/', views_permissions.RolePermissionsManagementView.as_view(), name='admin_permissions'),
+    
     # CRUD utilisateurs
     path('users/create/', views_admin.admin_create_user, name='admin_create_user'),
     path('users/<int:user_id>/update/', views_admin.admin_update_user, name='admin_update_user'),
     path('users/<int:user_id>/delete/', views_admin.admin_delete_user, name='admin_delete_user'),
     path('users/<int:user_id>/toggle-status/', views_admin.admin_toggle_user_status, name='admin_toggle_user_status'),
-    
-    # Gestion des rôles et permissions
-    path('role-permissions/', views_admin.admin_role_permissions, name='admin_role_permissions'),
     
     # ===== TABLEAU DE BORD ADMIN =====
     

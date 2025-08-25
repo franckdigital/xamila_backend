@@ -30,6 +30,32 @@ class IsSGIManagerOrAdmin(permissions.BasePermission):
         )
 
 
+class IsSGIManager(permissions.BasePermission):
+    """
+    Permission pour les managers SGI uniquement
+    """
+    def has_permission(self, request, view):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'SGI_MANAGER'
+        )
+
+
+class IsSGIManagerOfSGI(permissions.BasePermission):
+    """
+    Permission pour vérifier qu'un manager SGI gère bien la SGI spécifiée
+    """
+    def has_object_permission(self, request, view, obj):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.role == 'SGI_MANAGER' and
+            hasattr(request.user, 'managed_sgi') and
+            request.user.managed_sgi == obj
+        )
+
+
 class IsInstructorOrAdmin(permissions.BasePermission):
     """
     Permission pour les instructeurs ou administrateurs
