@@ -325,7 +325,7 @@ def savings_deposit(request):
                 notification_type='IN_APP',
                 priority='MEDIUM',
                 data={
-                    'deposit_id': deposit.id,
+                    'deposit_id': str(deposit.id),
                     'amount': str(montant),
                     'new_balance': nouveau_solde,
                     'reference': deposit.transaction_reference
