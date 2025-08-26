@@ -346,7 +346,7 @@ class PermissionAdmin(admin.ModelAdmin):
     list_display = ['code', 'name', 'category', 'is_active', 'created_at']
     list_filter = ['category', 'is_active', 'created_at']
     search_fields = ['code', 'name', 'description']
-    readonly_fields = ['id', 'created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at']
     
     fieldsets = (
         ('Permission', {
@@ -359,7 +359,7 @@ class PermissionAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
         ('Dates', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('created_at',),
             'classes': ('collapse',)
         })
     )
