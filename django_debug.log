@@ -3651,3 +3651,14 @@ INFO 2025-08-25 14:52:36,284 autoreload 5500 18656 C:\Users\kfran\CascadeProject
 INFO 2025-08-25 14:52:36,642 autoreload 8948 20892 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
 INFO 2025-08-25 19:53:56,222 autoreload 6856 22748 Watching for file changes with StatReloader
 INFO 2025-08-25 22:45:12,790 autoreload 6856 22748 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-26 00:05:31,426 autoreload 21476 6800 Watching for file changes with StatReloader
+INFO 2025-08-26 00:25:12,656 autoreload 21476 6800 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 00:25:17,258 autoreload 14728 13736 Watching for file changes with StatReloader
+INFO 2025-08-26 00:26:13,742 autoreload 14728 13736 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 00:26:18,209 autoreload 19016 21356 Watching for file changes with StatReloader
+INFO 2025-08-26 00:30:37,380 autoreload 19016 21356 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 00:30:41,417 autoreload 24404 11940 Watching for file changes with StatReloader
+INFO 2025-08-26 00:31:47,439 autoreload 24404 11940 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 00:31:55,545 autoreload 24440 18976 Watching for file changes with StatReloader
+INFO 2025-08-26 00:32:30,915 autoreload 24440 18976 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 00:32:39,798 autoreload 23924 11048 Watching for file changes with StatReloader
