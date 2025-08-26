@@ -10,6 +10,7 @@ from .models import (
     User, SGI, ClientInvestmentProfile, SGIMatchingRequest,
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry
 )
+from .models_permissions import Permission, RolePermission
 
 
 @admin.register(User)
@@ -335,6 +336,65 @@ class AdminDashboardEntryAdmin(admin.ModelAdmin):
             'client_interaction__sgi',
             'assigned_to'
         )
+
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    """
+    Administration des permissions
+    """
+    list_display = ['code', 'name', 'category', 'is_active', 'created_at']
+    list_filter = ['category', 'is_active', 'created_at']
+    search_fields = ['code', 'name', 'description']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Permission', {
+            'fields': ('id', 'code', 'name', 'category')
+        }),
+        ('Description', {
+            'fields': ('description',)
+        }),
+        ('Statut', {
+            'fields': ('is_active',)
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(RolePermission)
+class RolePermissionAdmin(admin.ModelAdmin):
+    """
+    Administration des permissions par rôle
+    """
+    list_display = ['role', 'permission_code', 'permission_name', 'is_granted', 'created_at']
+    list_filter = ['role', 'is_granted', 'permission__category', 'created_at']
+    search_fields = ['permission__code', 'permission__name', 'role']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Attribution', {
+            'fields': ('id', 'role', 'permission', 'is_granted')
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def permission_code(self, obj):
+        return obj.permission.code
+    permission_code.short_description = 'Code Permission'
+    
+    def permission_name(self, obj):
+        return obj.permission.name
+    permission_name.short_description = 'Nom Permission'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('permission')
 
 
 # Personnalisation de l'admin Django

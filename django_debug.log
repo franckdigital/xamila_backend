@@ -3700,3 +3700,6 @@ INFO 2025-08-26 12:17:45,496 autoreload 11156 20856 C:\Users\kfran\CascadeProjec
 INFO 2025-08-26 12:17:49,150 autoreload 10084 22068 Watching for file changes with StatReloader
 INFO 2025-08-26 12:18:02,685 autoreload 10084 22068 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
 INFO 2025-08-26 12:18:06,537 autoreload 3880 24244 Watching for file changes with StatReloader
+INFO 2025-08-26 18:01:20,196 autoreload 3880 24244 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\admin.py changed, reloading.
+INFO 2025-08-26 18:01:29,546 autoreload 21000 23732 Watching for file changes with StatReloader
+INFO 2025-08-26 18:01:56,908 autoreload 21000 23732 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\admin.py changed, reloading.
