@@ -10,8 +10,14 @@ app_name = 'dashboard'
 urlpatterns = [
     # === DASHBOARDS PAR RÔLE ===
     
-    # Dashboard client/customer
-    path('customer/', views_dashboard.customer_dashboard_metrics, name='customer-dashboard'),
+    # Dashboard client/customer - Nouvelles API dynamiques
+    path('customer/stats/', views_dashboard.customer_dashboard_stats, name='customer-dashboard-stats'),
+    path('customer/investments/', views_dashboard.user_investments_list, name='user-investments'),
+    path('customer/savings-challenges/', views_dashboard.user_savings_challenges, name='user-savings-challenges'),
+    path('customer/transactions/', views_dashboard.user_transactions_list, name='user-transactions'),
+    
+    # Dashboard client/customer - Ancien endpoint (maintenu pour compatibilité)
+    path('customer/', views_dashboard.customer_dashboard_stats, name='customer-dashboard'),
     
     # Dashboard manager SGI
     path('sgi-manager/', views_dashboard.SGIManagerDashboardView.as_view(), name='sgi-manager-dashboard'),
@@ -27,7 +33,7 @@ urlpatterns = [
     
     # === ENDPOINTS SPÉCIFIQUES ===
     
-    # Savings & Challenges (pour CUSTOMER)
+    # Savings & Challenges (pour CUSTOMER) - Anciens endpoints
     path('savings/challenges/', views_dashboard.savings_challenges_list, name='savings-challenges'),
     path('savings/deposits/', views_dashboard.savings_deposits_list, name='savings-deposits'),
     

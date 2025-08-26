@@ -84,6 +84,9 @@ urlpatterns = [
     # Dashboard URLs
     path('dashboard/', include('core.urls_dashboard')),
     
+    # Bilans financiers URLs
+    path('bilans/', include('core.urls_bilans')),
+    
     # Savings URLs
     path('savings/', include('core.urls_savings')),
     

@@ -34,7 +34,7 @@ class UserPermissionsView(generics.ListAPIView):
     Récupère les permissions d'un utilisateur basées sur son rôle
     GET /api/user/permissions/
     """
-    serializer_class = PermissionSerializer
+    serializer_class = RolePermissionSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
@@ -45,9 +45,8 @@ class UserPermissionsView(generics.ListAPIView):
             is_granted=True
         ).select_related('permission')
         
-        # Extraire les permissions
-        permissions = [rp.permission for rp in role_permissions]
-        return permissions
+        # Retourner les RolePermissions au lieu des Permissions pour avoir is_granted
+        return role_permissions
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

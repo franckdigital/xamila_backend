@@ -13,6 +13,9 @@ from datetime import timedelta
 # Import des modèles de permissions sera fait après la définition du User
 # from .models_permissions import Permission, RolePermission
 
+# Import des modèles dashboard sera fait après la définition du User
+# from .models_dashboard import UserInvestment, SavingsChallenge, UserSavingsProgress, Transaction, UserDashboardStats
+
 
 class UserManager(BaseUserManager):
     """Manager personnalisé pour le modèle User"""

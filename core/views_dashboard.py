@@ -14,77 +14,233 @@ from rest_framework import status
 from django.db.models import Count, Sum, Avg
 from datetime import datetime, timedelta
 from .models import User
+from .models_dashboard import UserInvestment, UserSavingsProgress, DashboardTransaction, UserDashboardStats
+from .models_savings_challenge import SavingsChallenge
 import logging
 
 logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def customer_dashboard_metrics(request):
-    """Dashboard pour les clients CUSTOMER avec données dynamiques de la BD"""
+def customer_dashboard_stats(request):
+    """Statistiques du dashboard customer avec données réelles de la BD"""
     
-    # Utiliser l'utilisateur authentifié
     user = request.user
-    logger.info(f"Dashboard request for user: {user.email}")
+    logger.info(f"Dashboard stats request for user: {user.email}")
     
-    # Récupérer les données réelles depuis la base de données
-    from .models_savings_challenge import ChallengeParticipation, SavingsAccount, SavingsGoal
-    from django.db.models import Sum, Count, Avg
+    try:
+        # Récupérer ou créer les stats du dashboard
+        dashboard_stats, created = UserDashboardStats.objects.get_or_create(
+            user=user,
+            defaults={
+                'total_portfolio_value': 0,
+                'total_invested_amount': 0,
+                'global_performance_percentage': 0,
+                'current_month_savings': 0,
+                'savings_rank': 0,
+                'total_savings': 0
+            }
+        )
+        
+        # Rafraîchir les statistiques si nécessaire (plus de 1h)
+        from django.utils import timezone
+        if created or (timezone.now() - dashboard_stats.last_updated).seconds > 3600:
+            dashboard_stats.refresh_stats()
+        
+        # Calculer les données supplémentaires
+        from datetime import datetime
+        current_month = datetime.now().replace(day=1)
+        
+        # Épargne du mois actuel
+        monthly_savings = DashboardTransaction.objects.filter(
+            user=user,
+            transaction_type='SAVINGS',
+            status='CONFIRMED',
+            created_at__gte=current_month
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Rang dans le challenge actuel
+        active_challenge = SavingsChallenge.objects.filter(status='ACTIVE').first()
+        savings_rank = 0
+        if active_challenge:
+            user_progress = UserSavingsProgress.objects.filter(
+                user=user, 
+                challenge=active_challenge
+            ).first()
+            if user_progress:
+                savings_rank = user_progress.rank
+        
+        stats_data = {
+            'user_id': str(user.id),
+            'user_name': user.get_full_name() or user.email,
+            'user_role': user.role,
+            'total_portfolio_value': float(dashboard_stats.total_portfolio_value),
+            'total_invested_amount': float(dashboard_stats.total_invested_amount),
+            'global_performance_percentage': float(dashboard_stats.global_performance_percentage),
+            'current_month_savings': float(monthly_savings),
+            'savings_rank': savings_rank or dashboard_stats.savings_rank,
+            'total_savings': float(dashboard_stats.total_savings),
+            'last_updated': dashboard_stats.last_updated.isoformat()
+        }
+        
+        logger.info(f"Returning dashboard stats for {user.email}")
+        return Response(stats_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching dashboard stats for {user.email}: {str(e)}")
+        return Response({'error': 'Unable to fetch dashboard stats'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_investments_list(request):
+    """Liste des investissements SGI de l'utilisateur"""
     
-    # Calculs des données d'épargne réelles
-    participations = ChallengeParticipation.objects.filter(user=user)
-    savings_accounts = SavingsAccount.objects.filter(user=user, status='ACTIVE')
-    savings_goals = SavingsGoal.objects.filter(user=user, status='ACTIVE')
+    user = request.user
+    logger.info(f"Investments request for user: {user.email}")
     
-    # Total épargné dans tous les défis
-    total_savings = participations.aggregate(
-        total=Sum('total_saved')
-    )['total'] or 0
+    try:
+        investments = UserInvestment.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('sgi').order_by('-created_at')
+        
+        investments_data = []
+        for investment in investments:
+            investment_data = {
+                'id': str(investment.id),
+                'sgi_name': investment.sgi.name if investment.sgi else 'SGI Non définie',
+                'sgi_type': investment.sgi.investment_type if investment.sgi else 'N/A',
+                'invested_amount': float(investment.invested_amount),
+                'current_value': float(investment.current_value),
+                'performance_percentage': float(investment.performance_percentage),
+                'profit_loss': float(investment.profit_loss),
+                'purchase_date': investment.purchase_date.isoformat(),
+                'is_active': investment.is_active
+            }
+            investments_data.append(investment_data)
+        
+        return Response({'results': investments_data}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching investments for {user.email}: {str(e)}")
+        return Response({'error': 'Unable to fetch investments'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_savings_challenges(request):
+    """Challenges d'épargne de l'utilisateur avec progression"""
     
-    # Solde total des comptes d'épargne
-    account_balance = savings_accounts.aggregate(
-        total=Sum('balance')
-    )['total'] or 0
+    user = request.user
+    logger.info(f"Savings challenges request for user: {user.email}")
     
-    # Défis complétés
-    challenges_completed = participations.filter(status='COMPLETED').count()
+    try:
+        # Récupérer les progressions de l'utilisateur
+        user_progress = UserSavingsProgress.objects.filter(
+            user=user
+        ).select_related('challenge').order_by('-created_at')
+        
+        challenges_data = []
+        for progress in user_progress:
+            challenge = progress.challenge
+            
+            # Calculer le classement global
+            total_participants = UserSavingsProgress.objects.filter(
+                challenge=challenge
+            ).count()
+            
+            # Top 3 du classement
+            leaderboard = UserSavingsProgress.objects.filter(
+                challenge=challenge
+            ).order_by('-current_amount')[:3]
+            
+            leaderboard_data = []
+            for i, leader in enumerate(leaderboard, 1):
+                leaderboard_data.append({
+                    'rank': i,
+                    'name': leader.user.get_full_name() or leader.user.username,
+                    'amount': float(leader.current_amount)
+                })
+            
+            challenge_data = {
+                'id': str(challenge.id),
+                'title': challenge.title,
+                'description': challenge.description,
+                'target_amount': float(challenge.target_amount),
+                'current_amount': float(progress.current_amount),
+                'progress_percentage': float(progress.progress_percentage),
+                'streak_days': progress.streak_days,
+                'badges_earned': progress.badges_earned,
+                'rank': progress.rank,
+                'total_participants': total_participants,
+                'leaderboard': leaderboard_data,
+                'start_date': challenge.start_date.isoformat(),
+                'end_date': challenge.end_date.isoformat(),
+                'is_active': challenge.is_active,
+                'last_saving_date': progress.last_saving_date.isoformat() if progress.last_saving_date else None
+            }
+            challenges_data.append(challenge_data)
+        
+        return Response({'results': challenges_data}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching savings challenges for {user.email}: {str(e)}")
+        return Response({'error': 'Unable to fetch savings challenges'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_transactions_list(request):
+    """Historique des transactions de l'utilisateur"""
     
-    # Série actuelle (plus longue série parmi tous les défis)
-    from django.db import models
-    current_streak = participations.aggregate(
-        max_streak=models.Max('current_streak')
-    )['max_streak'] or 0
+    user = request.user
+    limit = int(request.GET.get('limit', 10))
+    logger.info(f"Transactions request for user: {user.email}, limit: {limit}")
     
-    # Objectif mensuel (somme des objectifs actifs)
-    monthly_goal = savings_goals.aggregate(
-        total_target=Sum('target_amount')
-    )['total_target'] or 0
-    
-    # Portfolio value (total épargné + soldes comptes)
-    portfolio_value = total_savings + account_balance
-    
-    # Dernière participation active
-    last_participation = participations.filter(status='ACTIVE').order_by('-last_deposit_at').first()
-    last_deposit = last_participation.last_deposit_at.date() if last_participation and last_participation.last_deposit_at else None
-    
-    savings_data = {
-        'user_id': str(user.id),
-        'user_name': user.get_full_name() or user.email,
-        'user_role': user.role,
-        'total_savings': float(total_savings),
-        'monthly_goal': float(monthly_goal),
-        'challenges_completed': challenges_completed,
-        'current_streak': current_streak,
-        'portfolio_value': float(portfolio_value),
-        'account_balance': float(account_balance),
-        'active_goals': savings_goals.count(),
-        'active_participations': participations.filter(status='ACTIVE').count(),
-        'last_deposit': last_deposit.isoformat() if last_deposit else None,
-        'total_deposits': participations.aggregate(total=Sum('deposits_count'))['total'] or 0
-    }
-    
-    logger.info(f"Returning dynamic dashboard data for {user.email}")
-    return Response(savings_data, status=status.HTTP_200_OK)
+    try:
+        transactions = DashboardTransaction.objects.filter(
+            user=user
+        ).select_related('sgi', 'investment', 'savings_challenge').order_by('-created_at')[:limit]
+        
+        transactions_data = []
+        for transaction in transactions:
+            # Déterminer l'icône et la couleur selon le type
+            icon_color_map = {
+                'INVESTMENT': {'icon': 'ArrowUpward', 'color': '#4caf50'},
+                'WITHDRAWAL': {'icon': 'ArrowDownward', 'color': '#f44336'},
+                'SAVINGS': {'icon': 'Savings', 'color': '#ff9800'},
+                'DIVIDEND': {'icon': 'TrendingUp', 'color': '#2196f3'},
+                'FEE': {'icon': 'Remove', 'color': '#9e9e9e'}
+            }
+            
+            icon_info = icon_color_map.get(transaction.transaction_type, {'icon': 'AccountBalance', 'color': '#1976d2'})
+            
+            # Déterminer la description contextuelle
+            context_name = 'N/A'
+            if transaction.sgi:
+                context_name = transaction.sgi.name
+            elif transaction.savings_challenge:
+                context_name = transaction.savings_challenge.title
+            
+            transaction_data = {
+                'id': str(transaction.id),
+                'type': transaction.get_transaction_type_display(),
+                'amount': f"{'+' if transaction.transaction_type in ['INVESTMENT', 'SAVINGS', 'DIVIDEND'] else '-'}{float(abs(transaction.amount)):,.0f} FCFA",
+                'amount_value': float(transaction.amount),
+                'date': transaction.created_at.strftime('%d %b %Y'),
+                'status': transaction.get_status_display(),
+                'description': transaction.description,
+                'context_name': context_name,
+                'reference_id': transaction.reference_id,
+                'icon': icon_info['icon'],
+                'color': icon_info['color'],
+                'processed_at': transaction.processed_at.isoformat() if transaction.processed_at else None
+            }
+            transactions_data.append(transaction_data)
+        
+        return Response({'results': transactions_data}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error fetching transactions for {user.email}: {str(e)}")
+        return Response({'error': 'Unable to fetch transactions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
