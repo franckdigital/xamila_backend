@@ -46,6 +46,12 @@ def customer_dashboard_stats(request):
         from django.utils import timezone
         if created or (timezone.now() - dashboard_stats.last_updated).seconds > 3600:
             dashboard_stats.refresh_stats()
+            dashboard_stats.save()
+        
+        # Force refresh pour debug
+        logger.info(f"Force refreshing stats for {user.email}")
+        dashboard_stats.refresh_stats()
+        dashboard_stats.save()
         
         # Calculer les données supplémentaires
         from datetime import datetime

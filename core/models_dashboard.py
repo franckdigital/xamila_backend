@@ -162,7 +162,7 @@ class UserDashboardStats(models.Model):
         from datetime import datetime
         
         # Calcul du portefeuille
-        investments = self.user.investments.filter(is_active=True)
+        investments = UserInvestment.objects.filter(user=self.user, is_active=True)
         self.total_portfolio_value = investments.aggregate(
             total=Sum('current_value')
         )['total'] or 0
@@ -199,3 +199,8 @@ class UserDashboardStats(models.Model):
                 self.savings_rank = user_progress.rank
         
         self.save()
+        
+        # Log pour debug
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Stats refreshed for {self.user.email}: portfolio={self.total_portfolio_value}, invested={self.total_invested_amount}, performance={self.global_performance_percentage}%")
