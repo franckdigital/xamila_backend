@@ -3672,3 +3672,17 @@ INFO 2025-08-26 00:43:23,143 autoreload 19848 19736 C:\Users\kfran\CascadeProjec
 INFO 2025-08-26 00:43:27,936 autoreload 13828 19608 Watching for file changes with StatReloader
 INFO 2025-08-26 00:46:23,627 autoreload 13828 19608 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\__init__.py changed, reloading.
 INFO 2025-08-26 00:46:31,348 autoreload 24244 23236 Watching for file changes with StatReloader
+INFO 2025-08-26 01:03:24,522 autoreload 24244 23236 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
+INFO 2025-08-26 01:03:30,573 autoreload 11532 7552 Watching for file changes with StatReloader
+INFO 2025-08-26 01:03:38,138 autoreload 11532 7552 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
+INFO 2025-08-26 01:03:43,703 autoreload 22548 13828 Watching for file changes with StatReloader
+INFO 2025-08-26 01:05:12,422 autoreload 22548 13828 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 01:05:27,074 autoreload 23256 20980 Watching for file changes with StatReloader
+INFO 2025-08-26 01:05:39,515 autoreload 23256 20980 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\xamila\settings.py changed, reloading.
+INFO 2025-08-26 01:05:50,383 autoreload 24276 12008 Watching for file changes with StatReloader
+INFO 2025-08-26 01:06:11,528 autoreload 24276 12008 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
+INFO 2025-08-26 01:06:16,588 autoreload 18792 23040 Watching for file changes with StatReloader
+INFO 2025-08-26 01:07:15,142 autoreload 18792 23040 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
+INFO 2025-08-26 01:07:21,787 autoreload 15256 21380 Watching for file changes with StatReloader
+INFO 2025-08-26 01:08:21,658 autoreload 15256 21380 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
+INFO 2025-08-26 01:08:26,575 autoreload 22896 6232 Watching for file changes with StatReloader

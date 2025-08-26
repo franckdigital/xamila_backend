@@ -19,10 +19,11 @@ urlpatterns = [
     
     # Role permission management endpoints
     path('role-permissions/', views_admin.admin_role_permissions, name='admin_role_permissions'),
-    path('permissions/update/', views_permissions.admin_update_role_permission, name='admin_update_role_permission'),
+    path('permissions/update/', views_permissions.update_role_permission, name='admin_update_role_permission'),
     
     # User permissions endpoints
-    path('permissions/', views_permissions.RolePermissionsManagementView.as_view(), name='admin_permissions'),
+    path('permissions/', views_permissions.admin_permissions_list, name='admin_permissions'),
+    path('permissions/roles/', views_permissions.admin_role_permissions_list, name='admin_role_permissions'),
     
     # CRUD utilisateurs
     path('users/create/', views_admin.admin_create_user, name='admin_create_user'),
