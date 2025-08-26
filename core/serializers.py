@@ -6,6 +6,7 @@ from .models import (
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry,
     OTP, Contract, QuizQuestion, QuizSubmission, Stock
 )
+from .models_permissions import Permission, RolePermission
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -429,3 +430,20 @@ class AdminUserCreationSerializer(BaseUserRegistrationSerializer):
     
     def create(self, validated_data):
         return super().create(validated_data)
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    """Serializer pour les permissions"""
+    
+    class Meta:
+        model = Permission
+        fields = ['id', 'name', 'code', 'category', 'description']
+
+
+class RolePermissionSerializer(serializers.ModelSerializer):
+    """Serializer pour les permissions de rôle"""
+    permission = PermissionSerializer(read_only=True)
+    
+    class Meta:
+        model = RolePermission
+        fields = ['id', 'role', 'permission', 'is_granted']

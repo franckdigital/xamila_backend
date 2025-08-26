@@ -3686,3 +3686,7 @@ INFO 2025-08-26 01:07:15,142 autoreload 18792 23040 C:\Users\kfran\CascadeProjec
 INFO 2025-08-26 01:07:21,787 autoreload 15256 21380 Watching for file changes with StatReloader
 INFO 2025-08-26 01:08:21,658 autoreload 15256 21380 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_permissions.py changed, reloading.
 INFO 2025-08-26 01:08:26,575 autoreload 22896 6232 Watching for file changes with StatReloader
+INFO 2025-08-26 01:13:13,456 autoreload 22896 6232 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\serializers.py changed, reloading.
+INFO 2025-08-26 01:13:22,481 autoreload 24536 18180 Watching for file changes with StatReloader
+INFO 2025-08-26 01:13:32,221 autoreload 24536 18180 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\serializers.py changed, reloading.
+INFO 2025-08-26 01:13:35,224 autoreload 22596 5804 Watching for file changes with StatReloader
