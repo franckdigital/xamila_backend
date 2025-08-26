@@ -288,15 +288,16 @@ class OTPVerificationSerializer(serializers.Serializer):
 # ================================
 
 class BaseUserRegistrationSerializer(serializers.ModelSerializer):
-    """Serializer de base pour l'enregistrement d'utilisateurs"""
+    """Serializer de base pour l'enregistrement des utilisateurs"""
     
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    id = serializers.UUIDField(required=False, allow_null=True)
     
     class Meta:
         model = User
         fields = [
-            'username', 'email', 'password', 'password_confirm',
+            'id', 'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'phone',
             'country_of_residence', 'country_of_origin'
         ]
@@ -317,10 +318,20 @@ class BaseUserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
         
-        user = User.objects.create_user(
-            password=password,
-            **validated_data
-        )
+        # Si un ID est fourni, l'utiliser
+        user_id = validated_data.pop('id', None)
+        
+        if user_id:
+            user = User.objects.create_user(
+                id=user_id,
+                password=password,
+                **validated_data
+            )
+        else:
+            user = User.objects.create_user(
+                password=password,
+                **validated_data
+            )
         return user
 
 

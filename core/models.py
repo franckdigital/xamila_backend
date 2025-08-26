@@ -34,7 +34,14 @@ class UserManager(BaseUserManager):
                 counter += 1
             extra_fields['username'] = username
         
-        user = self.model(email=email, **extra_fields)
+        # Extraire l'ID personnalisé s'il est fourni
+        custom_id = extra_fields.pop('id', None)
+        
+        if custom_id:
+            user = self.model(id=custom_id, email=email, **extra_fields)
+        else:
+            user = self.model(email=email, **extra_fields)
+            
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -47,11 +54,18 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_verified', True)
         extra_fields.setdefault('role', 'ADMIN')
         
+        # Extraire l'ID personnalisé s'il est fourni
+        custom_id = extra_fields.pop('id', None)
+        
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Le superuser doit avoir is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Le superuser doit avoir is_superuser=True.')
         
+        # Remettre l'ID personnalisé dans extra_fields pour create_user
+        if custom_id:
+            extra_fields['id'] = custom_id
+            
         return self.create_user(email, password, **extra_fields)
 
 

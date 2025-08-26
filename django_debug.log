@@ -3690,3 +3690,13 @@ INFO 2025-08-26 01:13:13,456 autoreload 22896 6232 C:\Users\kfran\CascadeProject
 INFO 2025-08-26 01:13:22,481 autoreload 24536 18180 Watching for file changes with StatReloader
 INFO 2025-08-26 01:13:32,221 autoreload 24536 18180 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\serializers.py changed, reloading.
 INFO 2025-08-26 01:13:35,224 autoreload 22596 5804 Watching for file changes with StatReloader
+INFO 2025-08-26 12:11:52,705 autoreload 22596 5804 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\serializers.py changed, reloading.
+INFO 2025-08-26 12:11:57,991 autoreload 16848 20320 Watching for file changes with StatReloader
+INFO 2025-08-26 12:12:08,421 autoreload 16848 20320 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\serializers.py changed, reloading.
+INFO 2025-08-26 12:12:12,100 autoreload 20148 25552 Watching for file changes with StatReloader
+INFO 2025-08-26 12:17:32,081 autoreload 20148 25552 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-26 12:17:37,213 autoreload 11156 20856 Watching for file changes with StatReloader
+INFO 2025-08-26 12:17:45,496 autoreload 11156 20856 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-26 12:17:49,150 autoreload 10084 22068 Watching for file changes with StatReloader
+INFO 2025-08-26 12:18:02,685 autoreload 10084 22068 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
+INFO 2025-08-26 12:18:06,537 autoreload 3880 24244 Watching for file changes with StatReloader
