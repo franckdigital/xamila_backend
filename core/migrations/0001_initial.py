@@ -283,7 +283,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='clientinvestmentprofile',
             name='user',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='investment_profile', to='core.user'),
+            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='investment_profile', to='core.User'),
         ),
         migrations.CreateModel(
             name='AdminDashboardEntry',
@@ -294,7 +294,7 @@ class Migration(migrations.Migration):
                 ('admin_notes', models.TextField(blank=True, verbose_name='Notes administratives')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('assigned_to', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_dashboard_entries', to='core.user', verbose_name='Assigné à')),
+                ('assigned_to', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_dashboard_entries', to='core.User', verbose_name='Assigné à')),
                 ('client_interaction', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='dashboard_entry', to='core.clientsgiinteraction')),
             ],
             options={
@@ -314,7 +314,7 @@ class Migration(migrations.Migration):
                 ('last_used_at', models.DateTimeField(blank=True, null=True)),
                 ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
                 ('user_agent', models.TextField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='refresh_tokens', to='core.user')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='refresh_tokens', to='core.User')),
             ],
             options={
                 'verbose_name': 'Token de rafraîchissement',
@@ -334,7 +334,7 @@ class Migration(migrations.Migration):
                 ('correct_answers', models.PositiveIntegerField(verbose_name='Réponses correctes')),
                 ('time_spent', models.DurationField(blank=True, null=True, verbose_name='Temps passé')),
                 ('submitted_at', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quiz_submissions', to='core.user')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quiz_submissions', to='core.User')),
             ],
             options={
                 'verbose_name': 'Soumission de quiz',
@@ -356,7 +356,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True, verbose_name='Question active')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('created_by', models.ForeignKey(limit_choices_to={'role__in': ['ADMIN', 'INSTRUCTOR']}, on_delete=django.db.models.deletion.CASCADE, related_name='created_questions', to='core.user')),
+                ('created_by', models.ForeignKey(limit_choices_to={'role__in': ['ADMIN', 'INSTRUCTOR']}, on_delete=django.db.models.deletion.CASCADE, related_name='created_questions', to='core.User')),
             ],
             options={
                 'verbose_name': 'Question de quiz',
@@ -376,7 +376,7 @@ class Migration(migrations.Migration):
                 ('expires_at', models.DateTimeField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('used_at', models.DateTimeField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='otps', to='core.user')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='otps', to='core.User')),
             ],
             options={
                 'verbose_name': 'Code OTP',
@@ -428,8 +428,8 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('approved_at', models.DateTimeField(blank=True, null=True)),
                 ('rejected_at', models.DateTimeField(blank=True, null=True)),
-                ('approved_by', models.ForeignKey(blank=True, limit_choices_to={'role__in': ['SGI_MANAGER', 'ADMIN']}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_contracts', to='core.user')),
-                ('customer', models.ForeignKey(limit_choices_to={'role': 'CUSTOMER'}, on_delete=django.db.models.deletion.CASCADE, related_name='contracts', to='core.user')),
+                ('approved_by', models.ForeignKey(blank=True, limit_choices_to={'role__in': ['SGI_MANAGER', 'ADMIN']}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_contracts', to='core.User')),
+                ('customer', models.ForeignKey(limit_choices_to={'role': 'CUSTOMER'}, on_delete=django.db.models.deletion.CASCADE, related_name='contracts', to='core.User')),
                 ('sgi', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contracts', to='core.sgi')),
             ],
             options={

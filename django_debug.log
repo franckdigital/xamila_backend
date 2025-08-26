@@ -3666,3 +3666,7 @@ INFO 2025-08-26 00:38:22,881 autoreload 23924 11048 C:\Users\kfran\CascadeProjec
 INFO 2025-08-26 00:38:30,071 autoreload 16464 20568 Watching for file changes with StatReloader
 INFO 2025-08-26 00:40:06,381 autoreload 16464 20568 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\models.py changed, reloading.
 INFO 2025-08-26 00:40:11,009 autoreload 20340 14104 Watching for file changes with StatReloader
+INFO 2025-08-26 00:42:28,358 autoreload 20340 14104 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\0001_initial.py changed, reloading.
+INFO 2025-08-26 00:42:35,961 autoreload 19848 19736 Watching for file changes with StatReloader
+INFO 2025-08-26 00:43:23,143 autoreload 19848 19736 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\migrations\0001_initial.py changed, reloading.
+INFO 2025-08-26 00:43:27,936 autoreload 13828 19608 Watching for file changes with StatReloader
