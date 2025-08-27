@@ -14,6 +14,7 @@ class Command(BaseCommand):
             {'name': 'Mes SGI', 'code': 'my_sgi', 'category': 'Services Financiers'},
             {'name': 'Ma Caisse', 'code': 'ma_caisse', 'category': 'Services Financiers'},
             {'name': 'Défis Épargne', 'code': 'savings_challenge', 'category': 'Services Financiers'},
+            {'name': 'Bilans Financiers', 'code': 'bilans_financiers', 'category': 'Services Financiers'},
             
             # Gestion
             {'name': 'Gestion Utilisateurs', 'code': 'user_management', 'category': 'Gestion'},
@@ -59,7 +60,10 @@ class Command(BaseCommand):
         role_permissions = {
             'CUSTOMER': [
                 'savings_plans', 'trading_education', 'portfolio', 'my_sgi', 
-                'ma_caisse', 'savings_challenge'
+                'ma_caisse', 'savings_challenge', 'bilans_financiers'
+            ],
+            'BASIC': [
+                'bilans_financiers'
             ],
             'SGI_MANAGER': [
                 'sgi_management', 'contract_management', 'client_management',
