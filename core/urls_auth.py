@@ -24,6 +24,9 @@ urlpatterns = [
     # Enregistrement administrateur (public - avec vérification renforcée)
     path('register/admin/', views_auth.register_admin, name='register_admin'),
     
+    # Enregistrement utilisateur BASIC (public)
+    path('register/basic/', views_auth.register_basic, name='register_basic'),
+    
     # ================================
     # GESTION ADMIN DES UTILISATEURS
     # ================================

@@ -333,6 +333,64 @@ def register_admin(request):
         )
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_basic(request):
+    """
+    Enregistrement d'un utilisateur BASIC
+    """
+    logger.info(f"register_basic called with data: {request.data}")
+    
+    try:
+        # Utiliser le serializer de base avec role='BASIC'
+        data = request.data.copy()
+        data['role'] = 'BASIC'
+        
+        serializer = BaseUserRegistrationSerializer(data=data)
+        logger.info(f"Serializer created for basic registration")
+        
+        if serializer.is_valid():
+            logger.info("Serializer validation passed, creating basic user...")
+            user = serializer.save()
+            logger.info(f"Basic user created successfully: {user.email}")
+            
+            # Générer et envoyer OTP
+            logger.info("Generating OTP for basic user")
+            otp_code = generate_otp_code()
+            expires_at = timezone.now() + timedelta(minutes=10)
+            
+            OTP.objects.create(
+                user=user,
+                code=otp_code,
+                otp_type='REGISTRATION',
+                expires_at=expires_at
+            )
+            logger.info(f"OTP created for basic user: {otp_code}")
+            
+            # Envoyer OTP par email
+            logger.info("Sending OTP email to basic user")
+            email_sent = send_otp_email(user, otp_code, 'REGISTRATION')
+            logger.info(f"OTP email sent: {email_sent}")
+            
+            return Response({
+                'message': 'Inscription utilisateur BASIC réussie. Un code de vérification a été envoyé à votre email.',
+                'user_id': user.id,
+                'email_sent': email_sent,
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            logger.error(f"Basic registration validation failed: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        logger.error(f"Error in register_basic: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return Response(
+            {'error': f'Erreur lors de la création du compte utilisateur BASIC: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 # ================================
 # VUES ADMIN POUR CRÉATION D'UTILISATEURS
 # ================================
