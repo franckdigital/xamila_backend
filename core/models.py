@@ -80,6 +80,7 @@ class User(AbstractUser):
     # Rôles utilisateur complets basés sur les fonctionnalités XAMILA
     ROLE_CHOICES = [
         ('CUSTOMER', 'Client/Épargnant'),
+        ('BASIC', 'Utilisateur de base'),
         ('STUDENT', 'Étudiant/Apprenant'),
         ('SGI_MANAGER', 'Manager SGI'),
         ('INSTRUCTOR', 'Instructeur/Formateur'),
