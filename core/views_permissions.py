@@ -150,6 +150,80 @@ class RolePermissionsManagementView(generics.ListAPIView):
         if role:
             return RolePermission.objects.filter(role=role).select_related('permission')
         return RolePermission.objects.all().select_related('permission')
+    
+    def list(self, request, *args, **kwargs):
+        """Override pour retourner le format attendu par le dashboard admin"""
+        try:
+            # Récupérer toutes les permissions par rôle
+            role_permissions_data = {}
+            
+            # Obtenir tous les rôles uniques
+            roles = RolePermission.objects.values_list('role', flat=True).distinct().order_by('role')
+            
+            for role in roles:
+                role_permissions_data[role] = {}
+                role_perms = RolePermission.objects.filter(role=role).select_related('permission')
+                
+                for rp in role_perms:
+                    role_permissions_data[role][rp.permission.code] = rp.is_granted
+            
+            return Response({
+                "role_permissions": role_permissions_data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "error": f"Erreur lors de la récupération des permissions: {str(e)}",
+                "role_permissions": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_role_permission(request):
+    """
+    Toggle une permission pour un rôle spécifique (pour dashboard admin)
+    POST /api/admin/toggle-role-permission/
+    """
+    try:
+        role = request.data.get('role')
+        permission_code = request.data.get('permission_code')
+        
+        if not role or not permission_code:
+            return Response({
+                'error': 'Role et permission_code sont requis'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Récupérer la permission
+        try:
+            permission = Permission.objects.get(code=permission_code)
+        except Permission.DoesNotExist:
+            return Response({
+                'error': f'Permission {permission_code} non trouvée'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Récupérer ou créer l'association rôle-permission
+        role_permission, created = RolePermission.objects.get_or_create(
+            role=role,
+            permission=permission,
+            defaults={'is_granted': True}
+        )
+        
+        if not created:
+            # Toggle l'état existant
+            role_permission.is_granted = not role_permission.is_granted
+            role_permission.save()
+        
+        return Response({
+            'message': f'Permission {"accordée" if role_permission.is_granted else "révoquée"} avec succès',
+            'role': role,
+            'permission_code': permission_code,
+            'is_granted': role_permission.is_granted
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': f'Erreur: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 def update_role_permission(request):

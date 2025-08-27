@@ -18,7 +18,8 @@ urlpatterns = [
     path('users/<uuid:user_id>/action/', views_admin.admin_user_action, name='admin_user_action'),
     
     # Role permission management endpoints
-    path('role-permissions/', views_admin.admin_role_permissions, name='admin_role_permissions'),
+    path('role-permissions/', views_permissions.RolePermissionsManagementView.as_view(), name='admin_role_permissions'),
+    path('toggle-role-permission/', views_permissions.toggle_role_permission, name='admin_toggle_role_permission'),
     path('permissions/update/', views_permissions.update_role_permission, name='admin_update_role_permission'),
     
     # User permissions endpoints
