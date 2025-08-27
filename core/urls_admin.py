@@ -28,9 +28,9 @@ urlpatterns = [
     
     # CRUD utilisateurs
     path('users/create/', views_admin.admin_create_user, name='admin_create_user'),
-    path('users/<int:user_id>/update/', views_admin.admin_update_user, name='admin_update_user'),
-    path('users/<int:user_id>/delete/', views_admin.admin_delete_user, name='admin_delete_user'),
-    path('users/<int:user_id>/toggle-status/', views_admin.admin_toggle_user_status, name='admin_toggle_user_status'),
+    path('users/<uuid:user_id>/update/', views_admin.admin_update_user, name='admin_update_user'),
+    path('users/<uuid:user_id>/delete/', views_admin.admin_delete_user, name='admin_delete_user'),
+    path('users/<uuid:user_id>/toggle-status/', views_admin.admin_toggle_user_status, name='admin_toggle_user_status'),
     
     # ===== TABLEAU DE BORD ADMIN =====
     
