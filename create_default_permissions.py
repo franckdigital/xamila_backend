@@ -53,18 +53,44 @@ def create_default_permissions():
     
     # Créer les permissions
     created_permissions = []
+    updated_permissions = []
+    
     for perm_data in permissions_data:
-        permission, created = Permission.objects.get_or_create(
-            code=perm_data['code'],
-            defaults={
-                'name': perm_data['name'],
-                'category': perm_data['category'],
-                'description': f"Permission pour accéder à {perm_data['name']}"
-            }
-        )
-        if created:
-            created_permissions.append(permission)
-            print(f"Créé: {permission}")
+        try:
+            # Essayer de récupérer par code d'abord
+            permission = Permission.objects.get(code=perm_data['code'])
+            # Mettre à jour si nécessaire
+            updated = False
+            if permission.name != perm_data['name']:
+                permission.name = perm_data['name']
+                updated = True
+            if permission.category != perm_data['category']:
+                permission.category = perm_data['category']
+                updated = True
+            if updated:
+                permission.save()
+                updated_permissions.append(permission)
+                print(f"Mis à jour: {permission}")
+        except Permission.DoesNotExist:
+            # Créer une nouvelle permission
+            try:
+                permission = Permission.objects.create(
+                    code=perm_data['code'],
+                    name=perm_data['name'],
+                    category=perm_data['category'],
+                    description=f"Permission pour accéder à {perm_data['name']}"
+                )
+                created_permissions.append(permission)
+                print(f"Créé: {permission}")
+            except Exception as e:
+                print(f"Erreur lors de la création de {perm_data['code']}: {e}")
+                # Essayer de récupérer par nom si le code a échoué
+                try:
+                    permission = Permission.objects.get(name=perm_data['name'])
+                    print(f"Trouvé existant par nom: {permission}")
+                except Permission.DoesNotExist:
+                    print(f"Impossible de créer ou trouver: {perm_data['code']}")
+                    continue
     
     # Définir les permissions par rôle
     role_permissions = {
@@ -112,8 +138,16 @@ def create_default_permissions():
     
     print(f"\n✅ SUCCÈS:")
     print(f"- Permissions créées: {len(created_permissions)}")
+    print(f"- Permissions mises à jour: {len(updated_permissions)}")
     print(f"- Associations rôle-permission créées: {created_role_perms}")
     print(f"- Rôle BASIC configuré avec permission 'bilans_financiers'")
+    
+    # Vérifier que bilans_financiers existe
+    try:
+        bilans_perm = Permission.objects.get(code='bilans_financiers')
+        print(f"✅ Permission 'bilans_financiers' confirmée: {bilans_perm.name}")
+    except Permission.DoesNotExist:
+        print("❌ Permission 'bilans_financiers' non trouvée!")
 
 if __name__ == '__main__':
     create_default_permissions()
