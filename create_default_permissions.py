@@ -88,6 +88,11 @@ def create_default_permissions():
                 try:
                     permission = Permission.objects.get(name=perm_data['name'])
                     print(f"Trouvé existant par nom: {permission}")
+                    # Mettre à jour le code si nécessaire
+                    if permission.code != perm_data['code']:
+                        permission.code = perm_data['code']
+                        permission.save()
+                        print(f"Code mis à jour: {permission.code}")
                 except Permission.DoesNotExist:
                     print(f"Impossible de créer ou trouver: {perm_data['code']}")
                     continue
