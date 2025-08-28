@@ -293,13 +293,17 @@ class BaseUserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
     id = serializers.UUIDField(required=False, allow_null=True)
+    role = serializers.CharField(required=False)
+    user_type = serializers.CharField(required=False, write_only=True)
+    age_range = serializers.CharField(required=False)
+    gender = serializers.CharField(required=False)
     
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'password', 'password_confirm',
-            'first_name', 'last_name', 'phone',
-            'country_of_residence', 'country_of_origin'
+            'first_name', 'last_name', 'phone', 'role', 'user_type',
+            'country_of_residence', 'country_of_origin', 'age_range', 'gender'
         ]
     
     def validate(self, attrs):
@@ -317,6 +321,11 @@ class BaseUserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
+        
+        # Mapper user_type vers role si présent
+        user_type = validated_data.pop('user_type', None)
+        if user_type:
+            validated_data['role'] = user_type
         
         # Si un ID est fourni, l'utiliser
         user_id = validated_data.pop('id', None)

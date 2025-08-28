@@ -344,10 +344,14 @@ def register_basic(request):
     try:
         # Utiliser le serializer de base avec role='BASIC'
         data = request.data.copy()
+        # Forcer le rôle BASIC
         data['role'] = 'BASIC'
+        # Mapper user_type vers role si présent
+        if 'user_type' in data:
+            data['role'] = data['user_type']
         
         serializer = BaseUserRegistrationSerializer(data=data)
-        logger.info(f"Serializer created for basic registration")
+        logger.info(f"Serializer created for basic registration with role: {data.get('role')}")
         
         if serializer.is_valid():
             logger.info("Serializer validation passed, creating basic user...")
