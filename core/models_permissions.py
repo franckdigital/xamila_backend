@@ -20,6 +20,7 @@ class RolePermission(models.Model):
     """Modèle pour associer les permissions aux rôles"""
     ROLE_CHOICES = [
         ('CUSTOMER', 'Client'),
+        ('BASIC', 'Utilisateur de base'),
         ('SGI_MANAGER', 'Manager SGI'),
         ('INSTRUCTOR', 'Formateur'),
         ('SUPPORT', 'Support'),
