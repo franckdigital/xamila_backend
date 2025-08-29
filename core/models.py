@@ -127,13 +127,11 @@ class User(AbstractUser):
         max_length=10, choices=GENDER_CHOICES, blank=True, null=True,
         verbose_name="Genre"
     )
+    # Pays de résidence et d'origine
     country = models.CharField(
         max_length=100, blank=True, null=True,
-        verbose_name="Pays de résidence"
+        verbose_name="Nationalité"
     )
-    
-    # Pays (anciens champs - à conserver pour compatibilité)
-    country_of_residence = models.CharField(max_length=100, blank=True, null=True)
     country_of_origin = models.CharField(max_length=100, blank=True, null=True)
     
     # Statut de vérification

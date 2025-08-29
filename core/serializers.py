@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'phone',
-            'role', 'country_of_residence', 'country_of_origin',
+            'role', 'country', 'country_of_origin',
             'is_verified', 'email_verified', 'phone_verified', 'is_active',
             'created_at', 'updated_at'
         ]
@@ -303,7 +303,7 @@ class BaseUserRegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'phone', 'role', 'user_type',
-            'country_of_residence', 'country_of_origin', 'age_range', 'gender'
+            'country', 'country_of_origin', 'age_range', 'gender'
         ]
     
     def validate(self, attrs):
