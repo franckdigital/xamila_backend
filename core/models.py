@@ -132,7 +132,7 @@ class User(AbstractUser):
         max_length=100, blank=True, null=True,
         verbose_name="Nationalité"
     )
-    country_of_origin = models.CharField(max_length=100, blank=True, null=True)
+    country_of_residence = models.CharField(max_length=100, blank=True, null=True)
     
     # Statut de vérification
     is_verified = models.BooleanField(default=False, verbose_name="Compte vérifié")
