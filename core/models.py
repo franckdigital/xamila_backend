@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 import uuid
 import random
@@ -88,14 +89,29 @@ class User(AbstractUser):
         ('ADMIN', 'Administrateur'),
     ]
     
+    # Redéfinir username pour ajouter des messages d'erreur en français
+    username = models.CharField(
+        _('username'),
+        max_length=150,
+        unique=True,
+        help_text=_('Requis. 150 caractères ou moins. Lettres, chiffres et @/./+/-/_ seulement.'),
+        validators=[AbstractUser.username_validator],
+        error_messages={
+            'unique': _('Ce nom d\'utilisateur est déjà utilisé.'),
+        },
+    )
+    
     # Informations personnelles étendues
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Redéfinir email pour le rendre unique (requis pour USERNAME_FIELD)
     email = models.EmailField(
         unique=True,
-        verbose_name='Email address',
-        help_text='Adresse email unique pour l\'authentification'
+        verbose_name=_('Email address'),
+        help_text=_('Adresse email unique pour l\'authentification'),
+        error_messages={
+            'unique': _('Cette adresse email est déjà utilisée.'),
+        }
     )
     
     phone = models.CharField(
