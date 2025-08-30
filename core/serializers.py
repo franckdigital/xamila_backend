@@ -303,7 +303,7 @@ class BaseUserRegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'phone', 'role', 'user_type',
-            'country', 'country_of_origin', 'age_range', 'gender'
+            'country', 'country_of_residence', 'age_range', 'gender'
         ]
     
     def validate(self, attrs):
