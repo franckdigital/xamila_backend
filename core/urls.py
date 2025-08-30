@@ -46,6 +46,9 @@ urlpatterns = [
     # === ENDPOINTS RESOURCES ===
     path('resources/', get_resource_content, name='resources'),
     
+    # === ENDPOINTS ADMIN RESOURCES ===
+    path('admin/resources/', include('core.urls_admin_resources')),
+    
     # User permissions
     path('user/permissions/', views_permissions.UserPermissionsView.as_view(), name='user_permissions'),
     path('user/permissions/check/<str:permission_code>/', views_permissions.check_permission, name='check_permission'),
