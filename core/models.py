@@ -1079,3 +1079,48 @@ from .models_blog import *
 
 # Import des modèles de challenge épargne
 from .models_savings_challenge import *
+
+class ResourceContent(models.Model):
+    """Modèle pour gérer le contenu des ressources (bannière et vidéo YouTube)"""
+    
+    banner_title = models.CharField(
+        max_length=200,
+        verbose_name="Titre de la bannière",
+        default="Ressources Challenge Épargne"
+    )
+    
+    banner_description = models.TextField(
+        verbose_name="Description de la bannière",
+        default="Découvrez toutes les ressources nécessaires pour réussir votre challenge d'épargne"
+    )
+    
+    youtube_video_id = models.CharField(
+        max_length=50,
+        verbose_name="ID de la vidéo YouTube",
+        help_text="Entrez uniquement l'ID de la vidéo YouTube (ex: dQw4w9WgXcQ)",
+        default="dQw4w9WgXcQ"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Actif"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Contenu des Ressources"
+        verbose_name_plural = "Contenus des Ressources"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Ressources - {self.banner_title}"
+    
+    @classmethod
+    def get_active_content(cls):
+        """Récupère le contenu actif ou crée un contenu par défaut"""
+        content = cls.objects.filter(is_active=True).first()
+        if not content:
+            content = cls.objects.create()
+        return content

@@ -10,6 +10,7 @@ from . import views_learning
 from . import views_savings_goal
 from . import views_notifications
 from . import views_permissions
+from .views_resources import get_resource_content
 
 # Router pour les ViewSets (si nécessaire plus tard)
 router = DefaultRouter()
@@ -41,6 +42,9 @@ urlpatterns = [
     
     # === ENDPOINTS NOTIFICATIONS    # Notifications
     path('notifications/', include('core.urls_notifications')),
+    
+    # === ENDPOINTS RESOURCES ===
+    path('resources/', get_resource_content, name='resources'),
     
     # User permissions
     path('user/permissions/', views_permissions.UserPermissionsView.as_view(), name='user_permissions'),

@@ -1,11 +1,12 @@
 from rest_framework import serializers
+from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from .models import (
     User, SGI, ClientInvestmentProfile, SGIMatchingRequest,
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry,
-    OTP, Contract, QuizQuestion, QuizSubmission, Stock
+    OTP, Contract, QuizQuestion, QuizSubmission, Stock, ResourceContent
 )
 from .models_permissions import Permission, RolePermission
 
@@ -438,6 +439,15 @@ class SupportRegistrationSerializer(BaseUserRegistrationSerializer):
         validated_data.pop('department', None)  # Pour l'instant, pas de modèle spécifique
         validated_data['role'] = 'SUPPORT'
         return super().create(validated_data)
+
+
+class ResourceContentSerializer(serializers.ModelSerializer):
+    """Serializer pour le contenu des ressources"""
+    
+    class Meta:
+        model = ResourceContent
+        fields = ['id', 'banner_title', 'banner_description', 'youtube_video_id', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class AdminUserCreationSerializer(BaseUserRegistrationSerializer):

@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     User, SGI, ClientInvestmentProfile, SGIMatchingRequest,
-    ClientSGIInteraction, EmailNotification, AdminDashboardEntry
+    ClientSGIInteraction, EmailNotification, AdminDashboardEntry, ResourceContent
 )
 from .models_permissions import Permission, RolePermission
 
@@ -395,6 +395,40 @@ class RolePermissionAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('permission')
+
+
+@admin.register(ResourceContent)
+class ResourceContentAdmin(admin.ModelAdmin):
+    """
+    Administration du contenu des ressources
+    """
+    list_display = ['banner_title', 'youtube_video_id', 'is_active', 'created_at', 'updated_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['banner_title', 'banner_description']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Contenu de la bannière', {
+            'fields': ('banner_title', 'banner_description')
+        }),
+        ('Vidéo YouTube', {
+            'fields': ('youtube_video_id',),
+            'description': 'Entrez uniquement l\'ID de la vidéo YouTube (la partie après "v=" dans l\'URL)'
+        }),
+        ('Paramètres', {
+            'fields': ('is_active',)
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def save_model(self, request, obj, form, change):
+        # S'assurer qu'un seul contenu est actif à la fois
+        if obj.is_active:
+            ResourceContent.objects.filter(is_active=True).exclude(pk=obj.pk).update(is_active=False)
+        super().save_model(request, obj, form, change)
 
 
 # Personnalisation de l'admin Django
