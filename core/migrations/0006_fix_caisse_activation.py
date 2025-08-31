@@ -43,7 +43,7 @@ def reverse_fix_caisse_activation_dates(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_savingsgoal_date_activation_caisse'),
+        ('core', '0005_add_and_fix_caisse_activation'),
     ]
 
     operations = [
