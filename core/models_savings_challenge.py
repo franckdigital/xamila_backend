@@ -389,6 +389,12 @@ class SavingsGoal(models.Model):
         default='ACTIVE', verbose_name="Statut"
     )
     
+    # Activation Ma Caisse (21 jours après création)
+    date_activation_caisse = models.DateField(
+        blank=True, null=True,
+        verbose_name="Date d'activation Ma Caisse"
+    )
+    
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -407,6 +413,20 @@ class SavingsGoal(models.Model):
         if self.target_amount > 0:
             return min(100, (self.current_amount / self.target_amount) * 100)
         return 0
+    
+    @property
+    def is_caisse_activated(self):
+        """Vérifie si Ma Caisse est activée (21 jours après création)"""
+        if self.date_activation_caisse:
+            return date.today() >= self.date_activation_caisse
+        return False
+    
+    def save(self, *args, **kwargs):
+        """Calcule automatiquement la date d'activation lors de la création"""
+        if not self.pk and not self.date_activation_caisse:
+            # Calculer 21 jours après la création
+            self.date_activation_caisse = date.today() + timedelta(days=21)
+        super().save(*args, **kwargs)
 
 
 class SavingsAccount(models.Model):

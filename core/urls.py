@@ -9,7 +9,7 @@ from . import views_trading
 from . import views_learning
 from . import views_savings_goal
 from . import views_notifications
-from . import views_permissions
+from . import views, views_bilans, views_permissions, views_dashboard, views_blog, views_cohorte, views_ma_caisse
 from .views_resources import get_resource_content
 from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte
 
@@ -116,8 +116,12 @@ urlpatterns = [
     path('admin/notifications/', views.EmailNotificationListView.as_view(), name='email-notifications'),
     
     # === ENDPOINTS COHORTES ===
-    path('cohortes/creer/', creer_cohorte, name='creer-cohorte'),
-    path('cohortes/verifier-code/', verifier_code_cohorte, name='verifier-code-cohorte'),
-    path('cohortes/mes-cohortes/', mes_cohortes, name='mes-cohortes'),
-    path('cohortes/activer-acces/', activer_acces_challenge, name='activer-acces-challenge'),
+    path('cohortes/verifier-code/', views_cohorte.verifier_code_cohorte, name='verifier_code_cohorte'),
+    path('cohortes/mes-cohortes/', views_cohorte.mes_cohortes, name='mes_cohortes'),
+    path('cohortes/activer-acces/', views_cohorte.activer_acces_challenge, name='activer_acces_challenge'),
+    path('cohortes/creer/', views_cohorte.creer_cohorte, name='creer_cohorte'),
+    
+    # Ma Caisse endpoints
+    path('ma-caisse/verifier-activation/', views_ma_caisse.verifier_activation_caisse, name='verifier_activation_caisse'),
+    path('ma-caisse/statut-objectifs/', views_ma_caisse.statut_objectifs_epargne, name='statut_objectifs_epargne'),
 ]
