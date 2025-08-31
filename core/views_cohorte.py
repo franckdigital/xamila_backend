@@ -208,7 +208,7 @@ def creer_cohorte(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Trouver l'utilisateur cible
-        from django.contrib.auth.models import User
+        from .models import User
         try:
             user_cible = User.objects.get(email=email_utilisateur)
         except User.DoesNotExist:
