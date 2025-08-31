@@ -423,9 +423,14 @@ class SavingsGoal(models.Model):
     
     def save(self, *args, **kwargs):
         """Calcule automatiquement la date d'activation lors de la création"""
-        if not self.pk and not self.date_activation_caisse:
-            # Calculer 21 jours après la création
-            self.date_activation_caisse = date.today() + timedelta(days=21)
+        # Toujours calculer la date d'activation si elle n'existe pas
+        if not self.date_activation_caisse:
+            # Si l'objet existe déjà, utiliser created_at, sinon utiliser aujourd'hui
+            if self.pk and self.created_at:
+                base_date = self.created_at.date()
+            else:
+                base_date = date.today()
+            self.date_activation_caisse = base_date + timedelta(days=21)
         super().save(*args, **kwargs)
 
 
