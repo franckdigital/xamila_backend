@@ -38,7 +38,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('first_name', 'last_name', 'phone')
         }),
         ('Localisation', {
-            'fields': ('country_of_residence', 'country_of_origin')
+            'fields': ('country_of_residence',)
         }),
         ('Rôle et permissions', {
             'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
