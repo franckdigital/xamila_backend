@@ -1,0 +1,273 @@
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_http_methods
+import json
+from .models import Cohorte
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verifier_code_cohorte(request):
+    """
+    Vérifie si un code de cohorte est valide pour l'utilisateur connecté
+    """
+    try:
+        data = json.loads(request.body)
+        code = data.get('code', '').strip()
+        
+        if not code:
+            return Response({
+                'valid': False,
+                'message': 'Code requis'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Vérifier le code avec l'utilisateur connecté
+        user = request.user
+        is_valid = Cohorte.verifier_code_acces(
+            code=code,
+            user_email=user.email,
+            user_id=user.id
+        )
+        
+        if is_valid:
+            # Récupérer les informations de la cohorte
+            cohorte = Cohorte.objects.get(
+                code=code,
+                email_utilisateur=user.email,
+                user_id=user.id,
+                actif=True
+            )
+            
+            return Response({
+                'valid': True,
+                'message': 'Code valide',
+                'cohorte': {
+                    'id': str(cohorte.id),
+                    'nom': cohorte.nom,
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee,
+                    'code': cohorte.code
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'valid': False,
+                'message': 'Code invalide ou non autorisé pour cet utilisateur'
+            }, status=status.HTTP_403_FORBIDDEN)
+            
+    except json.JSONDecodeError:
+        return Response({
+            'valid': False,
+            'message': 'Format de données invalide'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'valid': False,
+            'message': f'Erreur serveur: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mes_cohortes(request):
+    """
+    Récupère toutes les cohortes de l'utilisateur connecté
+    """
+    try:
+        user = request.user
+        cohortes = Cohorte.objects.filter(
+            user=user,
+            actif=True
+        ).order_by('-annee', '-mois')
+        
+        cohortes_data = []
+        for cohorte in cohortes:
+            mois_nom = dict(Cohorte.MOIS_CHOICES)[cohorte.mois]
+            cohortes_data.append({
+                'id': str(cohorte.id),
+                'code': cohorte.code,
+                'nom': cohorte.nom,
+                'mois': cohorte.mois,
+                'mois_nom': mois_nom,
+                'annee': cohorte.annee,
+                'created_at': cohorte.created_at.isoformat()
+            })
+        
+        return Response({
+            'cohortes': cohortes_data,
+            'count': len(cohortes_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'message': f'Erreur serveur: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activer_acces_challenge(request):
+    """
+    Active l'accès au Challenge Épargne pour l'utilisateur connecté
+    après vérification du code cohorte
+    """
+    try:
+        data = json.loads(request.body)
+        code = data.get('code', '').strip()
+        
+        if not code:
+            return Response({
+                'success': False,
+                'message': 'Code requis'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        
+        # Vérifier le code
+        is_valid = Cohorte.verifier_code_acces(
+            code=code,
+            user_email=user.email,
+            user_id=user.id
+        )
+        
+        if is_valid:
+            # Marquer l'accès comme activé (peut être stocké en session ou dans le profil utilisateur)
+            request.session['challenge_access_activated'] = True
+            request.session['challenge_cohorte_code'] = code
+            
+            cohorte = Cohorte.objects.get(
+                code=code,
+                email_utilisateur=user.email,
+                user_id=user.id,
+                actif=True
+            )
+            
+            return Response({
+                'success': True,
+                'message': 'Accès au Challenge Épargne activé',
+                'cohorte': {
+                    'nom': cohorte.nom,
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': 'Code invalide ou non autorisé'
+            }, status=status.HTTP_403_FORBIDDEN)
+            
+    except json.JSONDecodeError:
+        return Response({
+            'success': False,
+            'message': 'Format de données invalide'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Erreur serveur: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def creer_cohorte(request):
+    """
+    Crée une nouvelle cohorte (Admin uniquement)
+    L'admin doit fournir l'email de l'utilisateur cible
+    """
+    try:
+        # Vérifier que l'utilisateur est admin
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'Accès réservé aux administrateurs'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        data = json.loads(request.body)
+        mois = data.get('mois')
+        annee = data.get('annee')
+        email_utilisateur = data.get('email_utilisateur')
+        
+        if not mois or not annee or not email_utilisateur:
+            return Response({
+                'success': False,
+                'message': 'Mois, année et email utilisateur requis'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not (1 <= mois <= 12):
+            return Response({
+                'success': False,
+                'message': 'Mois doit être entre 1 et 12'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Trouver l'utilisateur cible
+        from django.contrib.auth.models import User
+        try:
+            user_cible = User.objects.get(email=email_utilisateur)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': f'Aucun utilisateur trouvé avec l\'email: {email_utilisateur}'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Vérifier si une cohorte existe déjà pour cet utilisateur/mois/année
+        cohorte_existante = Cohorte.objects.filter(
+            user=user_cible,
+            mois=mois,
+            annee=annee
+        ).first()
+        
+        if cohorte_existante:
+            return Response({
+                'success': False,
+                'message': f'Une cohorte existe déjà pour {email_utilisateur} en {dict(Cohorte.MOIS_CHOICES)[mois]} {annee}',
+                'cohorte': {
+                    'id': str(cohorte_existante.id),
+                    'code': cohorte_existante.code,
+                    'nom': cohorte_existante.nom,
+                    'mois': cohorte_existante.mois,
+                    'annee': cohorte_existante.annee,
+                    'email_utilisateur': cohorte_existante.email_utilisateur
+                }
+            }, status=status.HTTP_409_CONFLICT)
+        
+        # Créer la nouvelle cohorte
+        cohorte = Cohorte.objects.create(
+            user=user_cible,
+            mois=mois,
+            annee=annee,
+            email_utilisateur=email_utilisateur
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Cohorte créée avec succès',
+            'cohorte': {
+                'id': str(cohorte.id),
+                'code': cohorte.code,
+                'nom': cohorte.nom,
+                'mois': cohorte.mois,
+                'annee': cohorte.annee,
+                'email_utilisateur': cohorte.email_utilisateur,
+                'username': user_cible.username,
+                'created_at': cohorte.created_at.isoformat()
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except json.JSONDecodeError:
+        return Response({
+            'success': False,
+            'message': 'Format de données invalide'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Erreur serveur: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

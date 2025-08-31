@@ -11,6 +11,7 @@ from . import views_savings_goal
 from . import views_notifications
 from . import views_permissions
 from .views_resources import get_resource_content
+from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte
 
 # Router pour les ViewSets (si nécessaire plus tard)
 router = DefaultRouter()
@@ -113,4 +114,10 @@ urlpatterns = [
     
     # Notifications email
     path('admin/notifications/', views.EmailNotificationListView.as_view(), name='email-notifications'),
+    
+    # === ENDPOINTS COHORTES ===
+    path('cohortes/creer/', creer_cohorte, name='creer-cohorte'),
+    path('cohortes/verifier-code/', verifier_code_cohorte, name='verifier-code-cohorte'),
+    path('cohortes/mes-cohortes/', mes_cohortes, name='mes-cohortes'),
+    path('cohortes/activer-acces/', activer_acces_challenge, name='activer-acces-challenge'),
 ]
