@@ -473,9 +473,9 @@ CORS_ALLOWED_METHODS = [
 ]
 
 # Pour le développement uniquement - autoriser toutes les origines
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOW_CREDENTIALS = True
+# Force CORS pour la production aussi (temporaire pour debug)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # ================================
 # LOGGING CONFIGURATION
