@@ -11,7 +11,7 @@ from . import views_savings_goal
 from . import views_notifications
 from . import views, views_bilans, views_permissions, views_dashboard, views_blog, views_cohorte, views_ma_caisse
 from .views_resources import get_resource_content
-from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte
+from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte, lister_toutes_cohortes
 
 # Router pour les ViewSets (si nécessaire plus tard)
 router = DefaultRouter()
