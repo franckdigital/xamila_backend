@@ -515,18 +515,17 @@ def collective_progress(request):
         # Adapter la structure pour correspondre au frontend - utiliser les comptes d'épargne
         top_savers = []
         for i, account in enumerate(SavingsAccount.objects.filter(status='ACTIVE').order_by('-balance')[:10], 1):
-            # Calculer la progression basée sur l'objectif du défi
-            participation = ChallengeParticipation.objects.filter(
-                user=account.user,
-                status='ACTIVE'
-            ).first()
+            # Calculer la progression basée sur l'objectif d'épargne mensuel en BD
             progress = 0
-            if participation and participation.personal_target > 0:
-                progress = (account.balance / participation.personal_target) * 100
+            if account.user.monthly_savings_goal > 0:
+                progress = (account.balance / account.user.monthly_savings_goal) * 100
+            
+            # Utiliser le username ou construire un nom d'affichage
+            display_name = account.user.username if account.user.username else f"Épargnant #{i}"
             
             top_savers.append({
                 'id': str(account.user.id),
-                'display_name': f"Épargnant #{i}",
+                'display_name': display_name,
                 'amount': float(account.balance),
                 'is_current_user': account.user == request.user,
                 'level': min(5, max(1, int(account.balance / 100000))),  # 1 niveau par 100K FCFA
@@ -546,18 +545,17 @@ def collective_progress(request):
                 status='ACTIVE'
             ).order_by('-balance').values_list('user__id', flat=True)).index(current_user_account.user.id) + 1
             
-            # Calculer la progression
-            participation = ChallengeParticipation.objects.filter(
-                user=current_user_account.user,
-                status='ACTIVE'
-            ).first()
+            # Calculer la progression basée sur l'objectif d'épargne mensuel en BD
             progress = 0
-            if participation and participation.personal_target > 0:
-                progress = (current_user_account.balance / participation.personal_target) * 100
+            if current_user_account.user.monthly_savings_goal > 0:
+                progress = (current_user_account.balance / current_user_account.user.monthly_savings_goal) * 100
+            
+            # Utiliser le username ou le nom complet
+            display_name = current_user_account.user.username if current_user_account.user.username else f"{current_user_account.user.first_name} {current_user_account.user.last_name}"
             
             current_user = {
                 'id': str(current_user_account.user.id),
-                'display_name': f"{current_user_account.user.first_name} {current_user_account.user.last_name}",
+                'display_name': display_name,
                 'amount': float(current_user_account.balance),
                 'is_current_user': True,
                 'level': min(5, max(1, int(current_user_account.balance / 100000))),
@@ -624,25 +622,25 @@ def all_savers(request):
             # Calculer le rang global
             global_rank = (page - 1) * page_size + i + 1
             
-            # Calculer la progression basée sur l'objectif du défi
-            participation = ChallengeParticipation.objects.filter(
-                user=account.user,
-                status='ACTIVE'
-            ).first()
+            # Calculer la progression basée sur l'objectif d'épargne mensuel en BD
             progress = 0
-            if participation and participation.personal_target > 0:
-                progress = (account.balance / participation.personal_target) * 100
+            if account.user.monthly_savings_goal > 0:
+                progress = (account.balance / account.user.monthly_savings_goal) * 100
+            
+            # Utiliser le username ou construire un nom d'affichage
+            display_name = account.user.username if account.user.username else f"{account.user.first_name} {account.user.last_name}"
+            username = account.user.username if account.user.username else account.user.email
             
             savers_list.append({
                 'id': str(account.user.id),
-                'display_name': f"{account.user.first_name} {account.user.last_name}",
-                'username': account.user.email,
+                'display_name': display_name,
+                'username': username,
                 'amount': float(account.balance),
                 'is_current_user': account.user == request.user,
                 'level': min(5, max(1, int(account.balance / 100000))),
                 'progress': round(progress, 2),
                 'rank': global_rank,
-                'savings_goal': float(participation.personal_target) if participation else 0,
+                'savings_goal': float(account.user.monthly_savings_goal),
                 'current_savings': float(account.balance)
             })
         
