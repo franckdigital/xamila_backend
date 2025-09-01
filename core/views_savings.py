@@ -587,3 +587,80 @@ def collective_progress(request):
         return Response({
             'error': f'Erreur lors de la récupération de la progression collective: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def all_savers(request):
+    """Récupère tous les épargnants avec pagination et recherche"""
+    
+    try:
+        from django.core.paginator import Paginator
+        from .models_savings_challenge import ChallengeParticipation
+        
+        # Paramètres de pagination
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        search = request.GET.get('search', '').strip()
+        
+        # Base queryset - tous les comptes d'épargne actifs
+        queryset = SavingsAccount.objects.filter(status='ACTIVE').order_by('-balance')
+        
+        # Filtrage par recherche si fourni
+        if search:
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__email__icontains=search)
+            )
+        
+        # Pagination
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+        
+        # Construire la liste des épargnants
+        savers_list = []
+        for i, account in enumerate(page_obj.object_list):
+            # Calculer le rang global
+            global_rank = (page - 1) * page_size + i + 1
+            
+            # Calculer la progression basée sur l'objectif du défi
+            participation = ChallengeParticipation.objects.filter(
+                user=account.user,
+                status='ACTIVE'
+            ).first()
+            progress = 0
+            if participation and participation.personal_target > 0:
+                progress = (account.balance / participation.personal_target) * 100
+            
+            savers_list.append({
+                'id': str(account.user.id),
+                'display_name': f"{account.user.first_name} {account.user.last_name}",
+                'username': account.user.email,
+                'amount': float(account.balance),
+                'is_current_user': account.user == request.user,
+                'level': min(5, max(1, int(account.balance / 100000))),
+                'progress': round(progress, 2),
+                'rank': global_rank,
+                'savings_goal': float(participation.personal_target) if participation else 0,
+                'current_savings': float(account.balance)
+            })
+        
+        # Construire la réponse paginée
+        response_data = {
+            'results': savers_list,
+            'count': paginator.count,
+            'next': page_obj.next_page_number() if page_obj.has_next() else None,
+            'previous': page_obj.previous_page_number() if page_obj.has_previous() else None
+        }
+        
+        logger.info(f"All savers data retrieved successfully - Page {page}/{paginator.num_pages}")
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving all savers: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': f'Erreur lors de la récupération des épargnants: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

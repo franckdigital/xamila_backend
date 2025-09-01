@@ -12,13 +12,9 @@ urlpatterns = [
     # Transactions
     path('transactions/', views_savings.savings_transactions, name='savings_transactions'),
     
-    # Dépôts et retraits
-    path('deposit/', views_savings.savings_deposit, name='savings_deposit'),
-    path('withdraw/', views_savings.savings_withdraw, name='savings_withdraw'),
-    
-    # Statistiques
-    path('stats/', views_savings.savings_stats, name='savings_stats'),
+    # Dépôts (endpoint moved to dashboard)
     
     # Progression collective
     path('collective-progress/', views_savings.collective_progress, name='collective_progress'),
+    path('all-savers/', views_savings.all_savers, name='all_savers'),
 ]
