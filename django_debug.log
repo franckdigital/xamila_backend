@@ -3735,3 +3735,7 @@ INFO 2025-09-01 20:02:19,201 autoreload 25284 16160 Watching for file changes wi
 INFO 2025-09-01 20:02:19,839 autoreload 23128 6212 Watching for file changes with StatReloader
 INFO 2025-09-01 20:02:27,521 autoreload 25284 16160 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_savings.py changed, reloading.
 INFO 2025-09-01 20:02:28,660 autoreload 23128 6212 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\views_savings.py changed, reloading.
+INFO 2025-09-01 20:02:42,429 autoreload 25148 13792 Watching for file changes with StatReloader
+INFO 2025-09-01 20:02:43,007 autoreload 13620 18116 Watching for file changes with StatReloader
+INFO 2025-09-02 12:32:41,874 autoreload 13620 18116 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls_savings.py changed, reloading.
+INFO 2025-09-02 12:32:42,655 autoreload 25148 13792 C:\Users\kfran\CascadeProjects\fintech\xamila_backend\core\urls_savings.py changed, reloading.
