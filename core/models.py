@@ -167,6 +167,18 @@ class User(AbstractUser):
         verbose_name="Date de définition de l'objectif mensuel"
     )
     
+    # Champs de paiement et certificat
+    paye = models.BooleanField(
+        default=False,
+        verbose_name="Utilisateur payant",
+        help_text="Détermine si l'utilisateur a accès à toutes les fonctionnalités du challenge épargne"
+    )
+    certif_reussite = models.BooleanField(
+        default=False,
+        verbose_name="Certificat de réussite activé",
+        help_text="Permet aux utilisateurs non-payants d'accéder au certificat de réussite"
+    )
+    
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

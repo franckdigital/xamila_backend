@@ -31,6 +31,8 @@ urlpatterns = [
     path('users/<uuid:user_id>/update/', views_admin.admin_update_user, name='admin_update_user'),
     path('users/<uuid:user_id>/delete/', views_admin.admin_delete_user, name='admin_delete_user'),
     path('users/<uuid:user_id>/toggle-status/', views_admin.admin_toggle_user_status, name='admin_toggle_user_status'),
+    path('users/<uuid:user_id>/toggle-payment/', views_admin.admin_toggle_user_payment, name='admin_toggle_user_payment'),
+    path('users/<uuid:user_id>/toggle-certificate/', views_admin.admin_toggle_certificate, name='admin_toggle_certificate'),
     
     # ===== TABLEAU DE BORD ADMIN =====
     

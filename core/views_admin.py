@@ -909,6 +909,62 @@ def admin_delete_user(request, user_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+def admin_toggle_user_payment(request, user_id):
+    """
+    Activer/Désactiver le statut de paiement d'un utilisateur
+    POST /api/admin/users/{id}/toggle-payment/
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        user.paye = not user.paye
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Statut de paiement {"activé" if user.paye else "désactivé"} pour {user.username}',
+            'paye': user.paye
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'error': 'Utilisateur non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': f'Erreur lors de la mise à jour du statut de paiement: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_toggle_certificate(request, user_id):
+    """
+    Activer/Désactiver le certificat de réussite pour un utilisateur
+    POST /api/admin/users/{id}/toggle-certificate/
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        user.certif_reussite = not user.certif_reussite
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Certificat de réussite {"activé" if user.certif_reussite else "désactivé"} pour {user.username}',
+            'certif_reussite': user.certif_reussite
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'error': 'Utilisateur non trouvé'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': f'Erreur lors de la mise à jour du certificat: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
 def admin_toggle_user_status(request, user_id):
     """
     Activer/Désactiver un utilisateur
