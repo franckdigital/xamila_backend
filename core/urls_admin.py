@@ -8,6 +8,7 @@ from django.urls import path
 from . import views_admin
 from . import views_admin_advanced
 from . import views_permissions
+from . import views_cohortes
 
 urlpatterns = [
     # ===== GESTION DES UTILISATEURS =====
@@ -60,6 +61,14 @@ urlpatterns = [
     # Gestion des challenges épargne
     path('challenges/', views_admin.admin_challenges, name='admin_challenges'),
     path('challenges/<int:challenge_id>/', views_admin.admin_challenge_detail, name='admin_challenge_detail'),
+    
+    # ===== GESTION DES COHORTES =====
+    
+    # CRUD cohortes
+    path('cohortes/', views_cohortes.cohortes_list_create, name='admin_cohortes'),
+    path('cohortes/<int:cohorte_id>/update/', views_cohortes.update_cohorte, name='admin_update_cohorte'),
+    path('cohortes/<int:cohorte_id>/delete/', views_cohortes.delete_cohorte, name='admin_delete_cohorte'),
+    path('cohortes/<str:cohorte_code>/users/', views_cohortes.get_cohorte_users, name='admin_cohorte_users'),
     
     # ===== FONCTIONNALITÉS AVANCÉES =====
     
