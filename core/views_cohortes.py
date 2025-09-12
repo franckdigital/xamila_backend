@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import datetime
 import uuid
+from .models.cohorte import Cohorte
 
 User = get_user_model()
 
@@ -26,29 +27,21 @@ def cohortes_list_create(request):
             }, status=status.HTTP_403_FORBIDDEN)
 
         if request.method == 'GET':
-            # Récupérer tous les codes de cohorte uniques avec statistiques
-            cohortes_data = User.objects.exclude(
-                code_cohorte__isnull=True
-            ).exclude(
-                code_cohorte__exact=''
-            ).values('code_cohorte').annotate(
-                nombre_utilisateurs=Count('id')
-            ).order_by('code_cohorte')
-
+            # Récupérer toutes les cohortes existantes
+            cohortes_queryset = Cohorte.objects.all().order_by('-annee', '-mois')
+            
             cohortes = []
-            for idx, cohorte_data in enumerate(cohortes_data):
-                # Récupérer un utilisateur de cette cohorte pour obtenir les détails
-                sample_user = User.objects.filter(
-                    code_cohorte=cohorte_data['code_cohorte']
-                ).first()
-                
+            for cohorte in cohortes_queryset:
                 cohortes.append({
-                    'id': idx + 1,
-                    'code': cohorte_data['code_cohorte'],
-                    'nom': f"Cohorte {cohorte_data['code_cohorte']}",
-                    'date_creation': sample_user.date_joined.isoformat() if sample_user else timezone.now().isoformat(),
-                    'actif': True,
-                    'nombre_utilisateurs': cohorte_data['nombre_utilisateurs']
+                    'id': str(cohorte.id),
+                    'code': cohorte.code,
+                    'nom': cohorte.nom,
+                    'date_creation': cohorte.created_at.isoformat(),
+                    'actif': cohorte.actif,
+                    'nombre_utilisateurs': 1,  # Une cohorte = un utilisateur dans ce modèle
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee,
+                    'email_utilisateur': cohorte.email_utilisateur
                 })
 
             return Response({
@@ -58,20 +51,19 @@ def cohortes_list_create(request):
 
         elif request.method == 'POST':
             # Créer une nouvelle cohorte
-            nom = request.data.get('nom', '').strip()
             mois = request.data.get('mois')
             annee = request.data.get('annee')
             email_utilisateur = request.data.get('email_utilisateur', '').strip()
 
             # Validation des données
-            if not nom:
-                return Response({
-                    'error': 'Le nom de la cohorte est obligatoire'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
             if not mois or not annee:
                 return Response({
                     'error': 'Le mois et l\'année sont obligatoires'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if not email_utilisateur:
+                return Response({
+                    'error': 'L\'email utilisateur est obligatoire'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             try:
@@ -84,110 +76,69 @@ def cohortes_list_create(request):
                     'error': 'Mois et année doivent être des nombres valides'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Générer le code de cohorte automatiquement
-            code_cohorte = f"COH{annee}{mois:02d}{uuid.uuid4().hex[:6].upper()}"
-
-            # Vérifier que le code n'existe pas déjà
-            while User.objects.filter(code_cohorte=code_cohorte).exists():
-                code_cohorte = f"COH{annee}{mois:02d}{uuid.uuid4().hex[:6].upper()}"
-
-            # Si un email utilisateur est fourni, l'assigner à cette cohorte
-            if email_utilisateur:
-                try:
-                    user = User.objects.get(email=email_utilisateur)
-                    user.code_cohorte = code_cohorte
-                    user.save()
-                except User.DoesNotExist:
-                    return Response({
-                        'error': f'Utilisateur avec l\'email {email_utilisateur} non trouvé'
-                    }, status=status.HTTP_404_NOT_FOUND)
-
-            return Response({
-                'id': 1,  # ID temporaire
-                'code': code_cohorte,
-                'nom': nom,
-                'date_creation': timezone.now().isoformat(),
-                'actif': True,
-                'nombre_utilisateurs': 1 if email_utilisateur else 0,
-                'message': 'Cohorte créée avec succès'
-            }, status=status.HTTP_201_CREATED)
-
-    except Exception as e:
-        return Response({
-            'error': f'Erreur lors de l\'opération: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_cohorte(request):
-    """
-    Crée un nouveau code de cohorte
-    """
-    try:
-        # Vérifier que l'utilisateur est admin
-        if request.user.role != 'ADMIN':
-            return Response({
-                'error': 'Accès non autorisé'
-            }, status=status.HTTP_403_FORBIDDEN)
-
-        nom = request.data.get('nom', '').strip()
-        mois = request.data.get('mois')
-        annee = request.data.get('annee')
-        email_utilisateur = request.data.get('email_utilisateur', '').strip()
-
-        # Validation des données
-        if not nom:
-            return Response({
-                'error': 'Le nom de la cohorte est obligatoire'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        if not mois or not annee:
-            return Response({
-                'error': 'Le mois et l\'année sont obligatoires'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            mois = int(mois)
-            annee = int(annee)
-            if mois < 1 or mois > 12:
-                raise ValueError("Mois invalide")
-        except (ValueError, TypeError):
-            return Response({
-                'error': 'Mois et année doivent être des nombres valides'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Générer le code de cohorte automatiquement
-        code_cohorte = f"COH{annee}{mois:02d}{uuid.uuid4().hex[:6].upper()}"
-
-        # Vérifier que le code n'existe pas déjà
-        while User.objects.filter(code_cohorte=code_cohorte).exists():
-            code_cohorte = f"COH{annee}{mois:02d}{uuid.uuid4().hex[:6].upper()}"
-
-        # Si un email utilisateur est fourni, l'assigner à cette cohorte
-        if email_utilisateur:
+            # Trouver l'utilisateur
             try:
                 user = User.objects.get(email=email_utilisateur)
-                user.code_cohorte = code_cohorte
-                user.save()
             except User.DoesNotExist:
                 return Response({
                     'error': f'Utilisateur avec l\'email {email_utilisateur} non trouvé'
                 }, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({
-            'id': 1,  # ID temporaire
-            'code': code_cohorte,
-            'nom': nom,
-            'date_creation': timezone.now().isoformat(),
-            'actif': True,
-            'nombre_utilisateurs': 1 if email_utilisateur else 0,
-            'message': 'Cohorte créée avec succès'
-        }, status=status.HTTP_201_CREATED)
+            # Vérifier si une cohorte existe déjà pour cet utilisateur/mois/année
+            existing_cohorte = Cohorte.objects.filter(
+                user=user,
+                mois=mois,
+                annee=annee
+            ).first()
+
+            if existing_cohorte:
+                return Response({
+                    'success': False,
+                    'message': f'Une cohorte existe déjà pour {email_utilisateur} en {dict(Cohorte.MOIS_CHOICES)[mois]} {annee}',
+                    'cohorte': {
+                        'id': str(existing_cohorte.id),
+                        'code': existing_cohorte.code,
+                        'nom': existing_cohorte.nom,
+                        'mois': existing_cohorte.mois,
+                        'annee': existing_cohorte.annee,
+                        'email_utilisateur': existing_cohorte.email_utilisateur
+                    }
+                }, status=status.HTTP_200_OK)
+
+            # Créer une nouvelle cohorte
+            code_cohorte = f"COHORTE{annee}-{mois:02d}-{user.username}"
+            
+            # Générer le nom automatiquement
+            mois_nom = dict(Cohorte.MOIS_CHOICES)[mois]
+            nom = f"Cohorte {mois_nom} {annee}"
+
+            cohorte = Cohorte.objects.create(
+                code=code_cohorte,
+                nom=nom,
+                mois=mois,
+                annee=annee,
+                user=user,
+                email_utilisateur=email_utilisateur
+            )
+
+            return Response({
+                'success': True,
+                'message': 'Cohorte créée avec succès',
+                'cohorte': {
+                    'id': str(cohorte.id),
+                    'code': cohorte.code,
+                    'nom': cohorte.nom,
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee,
+                    'email_utilisateur': cohorte.email_utilisateur,
+                    'date_creation': cohorte.created_at.isoformat(),
+                    'actif': cohorte.actif
+                }
+            }, status=status.HTTP_201_CREATED)
 
     except Exception as e:
         return Response({
-            'error': f'Erreur lors de la création de la cohorte: {str(e)}'
+            'error': f'Erreur lors de l\'opération: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -204,28 +155,32 @@ def get_cohorte_users(request, cohorte_code):
                 'error': 'Accès non autorisé'
             }, status=status.HTTP_403_FORBIDDEN)
 
-        users = User.objects.filter(code_cohorte=cohorte_code).values(
-            'id', 'username', 'email', 'first_name', 'last_name', 
-            'role', 'is_active', 'date_joined'
-        )
+        # Trouver la cohorte par son code
+        try:
+            cohorte = Cohorte.objects.get(code=cohorte_code)
+        except Cohorte.DoesNotExist:
+            return Response({
+                'error': f'Cohorte avec le code {cohorte_code} non trouvée'
+            }, status=status.HTTP_404_NOT_FOUND)
 
-        users_list = []
-        for user in users:
-            users_list.append({
-                'id': user['id'],
-                'username': user['username'],
-                'email': user['email'],
-                'first_name': user['first_name'],
-                'last_name': user['last_name'],
-                'role': user['role'],
-                'is_active': user['is_active'],
-                'date_joined': user['date_joined'].isoformat() if user['date_joined'] else None,
-                'code_cohorte': cohorte_code
-            })
+        # Retourner l'utilisateur associé à cette cohorte
+        user = cohorte.user
+        user_data = {
+            'id': str(user.id),
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'is_active': user.is_active,
+            'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+            'cohorte_code': cohorte.code,
+            'cohorte_nom': cohorte.nom
+        }
 
         return Response({
-            'results': users_list,
-            'count': len(users_list)
+            'results': [user_data],
+            'count': 1
         })
 
     except Exception as e:
