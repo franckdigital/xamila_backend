@@ -179,6 +179,44 @@ class User(AbstractUser):
         help_text="Permet aux utilisateurs non-payants d'accéder au certificat de réussite"
     )
     
+    @property
+    def is_certificate_unlocked(self):
+        """
+        Vérifie si le certificat de réussite est débloqué.
+        Le certificat est débloqué si :
+        1. L'utilisateur est payant (paye=True), OU
+        2. Le certificat est activé manuellement par l'admin (certif_reussite=True), OU
+        3. 6 mois se sont écoulés depuis l'activation de la caisse
+        """
+        # Si l'utilisateur est payant, accès total
+        if self.paye:
+            return True
+            
+        # Si activé manuellement par l'admin
+        if self.certif_reussite:
+            return True
+            
+        # Vérifier si 6 mois se sont écoulés depuis l'activation de la caisse
+        from datetime import date, timedelta
+        from .models_savings_challenge import SavingsGoal
+        
+        try:
+            # Récupérer le premier objectif de l'utilisateur
+            premier_objectif = SavingsGoal.objects.filter(
+                user=self, 
+                status='ACTIVE'
+            ).order_by('created_at').first()
+            
+            if premier_objectif and premier_objectif.date_activation_caisse:
+                # Calculer 6 mois après l'activation de la caisse
+                date_unlock_certificate = premier_objectif.date_activation_caisse + timedelta(days=180)  # 6 mois ≈ 180 jours
+                return date.today() >= date_unlock_certificate
+                
+        except Exception:
+            pass
+            
+        return False
+    
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
