@@ -10,7 +10,7 @@ from . import views_learning
 from . import views_savings_goal
 from . import views_notifications
 from . import views, views_bilans, views_permissions, views_dashboard, views_blog, views_cohorte, views_ma_caisse
-from .views_resources import ResourceContentView
+from .views_resources import get_resource_content
 from .views_cohort_access import check_cohort_access, join_cohort_with_code, get_user_cohorts
 from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte
 
