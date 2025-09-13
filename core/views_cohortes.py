@@ -8,7 +8,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import datetime
 import uuid
-from .models.cohorte import Cohorte
+from .models import Cohorte
 
 User = get_user_model()
 
