@@ -27,7 +27,7 @@ def main():
     print("=" * 50)
     
     # Change to backend directory
-    backend_dir = "/home/ubuntu/xamila_backend"
+    backend_dir = "/var/www/xamila/xamila_backend"
     
     commands = [
         # Pull latest changes from git
