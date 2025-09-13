@@ -20,6 +20,7 @@ from .serializers_savings_challenge import (
     SavingsDepositSerializer, SavingsGoalSerializer,
     SavingsAccountSerializer, ChallengeLeaderboardSerializer
 )
+from .utils_cohorte_access import verifier_acces_challenge_actif
 
 
 class SavingsChallengeListView(generics.ListCreateAPIView):
@@ -32,6 +33,13 @@ class SavingsChallengeListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        # Vérifier l'accès au challenge via cohorte active
+        acces_autorise, message = verifier_acces_challenge_actif(self.request)
+        
+        if not acces_autorise:
+            # Retourner un queryset vide si l'accès n'est pas autorisé
+            return SavingsChallenge.objects.none()
+        
         queryset = SavingsChallenge.objects.filter(status='ACTIVE')
         
         # Filtres
@@ -84,6 +92,16 @@ def join_challenge(request, challenge_id):
     """
     Rejoindre un défi d'épargne
     """
+    # Vérifier l'accès au challenge via cohorte active
+    acces_autorise, message = verifier_acces_challenge_actif(request)
+    
+    if not acces_autorise:
+        return Response({
+            'error': 'Accès au challenge épargne non autorisé',
+            'message': message,
+            'code': 'CHALLENGE_ACCESS_DENIED'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
     try:
         challenge = SavingsChallenge.objects.get(id=challenge_id, status='ACTIVE')
     except SavingsChallenge.DoesNotExist:
@@ -132,6 +150,26 @@ def join_challenge(request, challenge_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ChallengeParticipationListView(generics.ListAPIView):
+    """
+    Liste des participations de l'utilisateur connecté
+    """
+    serializer_class = ChallengeParticipationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Vérifier l'accès au challenge via cohorte active
+        acces_autorise, message = verifier_acces_challenge_actif(self.request)
+        
+        if not acces_autorise:
+            # Retourner un queryset vide si l'accès n'est pas autorisé
+            return ChallengeParticipation.objects.none()
+        
+        return ChallengeParticipation.objects.filter(
+            user=self.request.user
+        ).select_related('challenge').order_by('-joined_at')
+
+
 class UserChallengeParticipationsView(generics.ListAPIView):
     """
     Participations aux défis de l'utilisateur connecté
@@ -140,6 +178,13 @@ class UserChallengeParticipationsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        # Vérifier l'accès au challenge via cohorte active
+        acces_autorise, message = verifier_acces_challenge_actif(self.request)
+        
+        if not acces_autorise:
+            # Retourner un queryset vide si l'accès n'est pas autorisé
+            return ChallengeParticipation.objects.none()
+        
         return ChallengeParticipation.objects.filter(
             user=self.request.user
         ).select_related('challenge').order_by('-joined_at')
@@ -153,6 +198,13 @@ class ChallengeParticipationDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        # Vérifier l'accès au challenge via cohorte active
+        acces_autorise, message = verifier_acces_challenge_actif(self.request)
+        
+        if not acces_autorise:
+            # Retourner un queryset vide si l'accès n'est pas autorisé
+            return ChallengeParticipation.objects.none()
+        
         return ChallengeParticipation.objects.filter(
             user=self.request.user
         ).select_related('challenge')
@@ -164,6 +216,16 @@ def make_deposit(request, participation_id):
     """
     Effectuer un dépôt dans le cadre d'un défi
     """
+    # Vérifier l'accès au challenge via cohorte active
+    acces_autorise, message = verifier_acces_challenge_actif(request)
+    
+    if not acces_autorise:
+        return Response({
+            'error': 'Accès au challenge épargne non autorisé',
+            'message': message,
+            'code': 'CHALLENGE_ACCESS_DENIED'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
     try:
         participation = ChallengeParticipation.objects.get(
             id=participation_id,
@@ -213,6 +275,26 @@ def make_deposit(request, participation_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserSavingsDepositsView(generics.ListAPIView):
+    """
+    Historique des dépôts de l'utilisateur connecté
+    """
+    serializer_class = SavingsDepositSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        # Vérifier l'accès au challenge via cohorte active
+        acces_autorise, message = verifier_acces_challenge_actif(self.request)
+        
+        if not acces_autorise:
+            # Retourner un queryset vide si l'accès n'est pas autorisé
+            return SavingsDeposit.objects.none()
+        
+        return SavingsDeposit.objects.filter(
+            participation__user=self.request.user
+        ).select_related('participation__challenge').order_by('-created_at')
+
+
 class SavingsDepositListView(generics.ListAPIView):
     """
     Historique des dépôts de l'utilisateur
@@ -228,12 +310,22 @@ class SavingsDepositListView(generics.ListAPIView):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def challenge_leaderboard(request, challenge_id):
+def get_leaderboard(request, challenge_id):
     """
-    Classement d'un défi spécifique
+    Récupérer le classement d'un défi
     """
+    # Vérifier l'accès au challenge via cohorte active
+    acces_autorise, message = verifier_acces_challenge_actif(request)
+    
+    if not acces_autorise:
+        return Response({
+            'error': 'Accès au challenge épargne non autorisé',
+            'message': message,
+            'code': 'CHALLENGE_ACCESS_DENIED'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
     try:
-        challenge = SavingsChallenge.objects.get(id=challenge_id)
+        challenge = SavingsChallenge.objects.get(id=challenge_id, status='ACTIVE')
     except SavingsChallenge.DoesNotExist:
         return Response(
             {'error': 'Défi introuvable'},
