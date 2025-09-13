@@ -189,11 +189,11 @@ def get_cohorte_users(request, cohorte_code):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def update_cohorte(request, cohorte_id):
     """
-    Met à jour une cohorte (placeholder pour compatibilité frontend)
+    Met à jour une cohorte ou toggle son statut actif
     """
     try:
         # Vérifier que l'utilisateur est admin
@@ -202,9 +202,43 @@ def update_cohorte(request, cohorte_id):
                 'error': 'Accès non autorisé'
             }, status=status.HTTP_403_FORBIDDEN)
 
-        return Response({
-            'message': 'Mise à jour des cohortes non implémentée'
-        }, status=status.HTTP_501_NOT_IMPLEMENTED)
+        # Trouver la cohorte
+        try:
+            cohorte = Cohorte.objects.get(id=cohorte_id)
+        except Cohorte.DoesNotExist:
+            return Response({
+                'error': 'Cohorte non trouvée'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'PATCH':
+            # Toggle du statut actif
+            if 'actif' in request.data:
+                cohorte.actif = request.data['actif']
+                cohorte.save()
+                
+                return Response({
+                    'success': True,
+                    'message': f'Cohorte {"activée" if cohorte.actif else "désactivée"} avec succès',
+                    'cohorte': {
+                        'id': str(cohorte.id),
+                        'code': cohorte.code,
+                        'nom': cohorte.nom,
+                        'actif': cohorte.actif,
+                        'mois': cohorte.mois,
+                        'annee': cohorte.annee,
+                        'email_utilisateur': cohorte.email_utilisateur
+                    }
+                })
+            else:
+                return Response({
+                    'error': 'Le champ "actif" est requis pour PATCH'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'PUT':
+            # Mise à jour complète (à implémenter si nécessaire)
+            return Response({
+                'message': 'Mise à jour complète des cohortes non implémentée'
+            }, status=status.HTTP_501_NOT_IMPLEMENTED)
 
     except Exception as e:
         return Response({
@@ -216,7 +250,7 @@ def update_cohorte(request, cohorte_id):
 @permission_classes([IsAuthenticated])
 def delete_cohorte(request, cohorte_id):
     """
-    Supprime une cohorte (placeholder pour compatibilité frontend)
+    Supprime une cohorte
     """
     try:
         # Vérifier que l'utilisateur est admin
@@ -225,9 +259,27 @@ def delete_cohorte(request, cohorte_id):
                 'error': 'Accès non autorisé'
             }, status=status.HTTP_403_FORBIDDEN)
 
+        # Trouver la cohorte
+        try:
+            cohorte = Cohorte.objects.get(id=cohorte_id)
+        except Cohorte.DoesNotExist:
+            return Response({
+                'error': 'Cohorte non trouvée'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Sauvegarder les infos avant suppression
+        cohorte_info = {
+            'code': cohorte.code,
+            'nom': cohorte.nom
+        }
+
+        # Supprimer la cohorte
+        cohorte.delete()
+
         return Response({
-            'message': 'Suppression des cohortes non implémentée'
-        }, status=status.HTTP_501_NOT_IMPLEMENTED)
+            'success': True,
+            'message': f'Cohorte "{cohorte_info["nom"]}" supprimée avec succès'
+        })
 
     except Exception as e:
         return Response({
