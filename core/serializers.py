@@ -8,6 +8,7 @@ from .models import (
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry,
     OTP, Contract, QuizQuestion, QuizSubmission, Stock, ResourceContent
 )
+from .models.cohorte import Cohorte
 from .models_permissions import Permission, RolePermission
 
 
@@ -479,3 +480,16 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
         fields = ['id', 'role', 'permission', 'is_granted']
+
+
+class CohorteSerializer(serializers.ModelSerializer):
+    """Serializer pour les cohortes"""
+    mois_display = serializers.CharField(source='get_mois_display', read_only=True)
+    
+    class Meta:
+        model = Cohorte
+        fields = [
+            'id', 'code', 'nom', 'mois', 'mois_display', 'annee',
+            'email_utilisateur', 'actif', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
