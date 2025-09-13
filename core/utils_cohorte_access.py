@@ -52,12 +52,12 @@ def verifier_acces_challenge_actif(request):
             nettoyer_session_challenge(request, user.id)
             return False, message
         
-        # Accès autorisé - mettre en cache
+        # Accès autorisé - mettre en cache avec durée réduite
         cohorte_names = ", ".join([c.nom for c in cohortes_actives])
         access_data = {
             'access': True,
             'message': f"Accès autorisé via cohorte(s): {cohorte_names}",
-            'expires_at': (timezone.now() + timedelta(minutes=30)).timestamp()
+            'expires_at': (timezone.now() + timedelta(minutes=2)).timestamp()  # Réduit à 2 minutes
         }
         request.session[session_key] = access_data
         

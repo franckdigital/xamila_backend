@@ -216,6 +216,11 @@ def update_cohorte(request, cohorte_id):
                 cohorte.actif = request.data['actif']
                 cohorte.save()
                 
+                # Invalider le cache en mettant à jour le timestamp de la cohorte
+                # Cela forcera une nouvelle vérification lors du prochain accès
+                cohorte.updated_at = timezone.now()
+                cohorte.save()
+                
                 return Response({
                     'success': True,
                     'message': f'Cohorte {"activée" if cohorte.actif else "désactivée"} avec succès',
