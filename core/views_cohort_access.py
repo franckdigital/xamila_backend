@@ -95,10 +95,22 @@ def join_cohort_with_code(request):
         
         # Vérifier si l'utilisateur est déjà dans cette cohorte
         if user.cohortes.filter(id=cohorte.id).exists():
+            # Nettoyer le cache de session pour forcer une nouvelle vérification
+            session_key = f'challenge_access_{user.id}'
+            if session_key in request.session:
+                del request.session[session_key]
+            
             return Response({
-                'success': False,
-                'message': 'Vous êtes déjà membre de cette cohorte'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'success': True,
+                'message': f'Vous êtes déjà membre de la cohorte {cohorte.nom}',
+                'cohorte': {
+                    'id': str(cohorte.id),
+                    'nom': cohorte.nom,
+                    'actif': cohorte.actif,
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee
+                }
+            }, status=status.HTTP_200_OK)
         
         # Ajouter l'utilisateur à la cohorte
         with transaction.atomic():
