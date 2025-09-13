@@ -6,9 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     User, SGI, ClientInvestmentProfile, SGIMatchingRequest,
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry,
-    OTP, Contract, QuizQuestion, QuizSubmission, Stock, ResourceContent
+    OTP, Contract, QuizQuestion, QuizSubmission, Stock, ResourceContent,
+    Cohorte
 )
-from .models.cohorte import Cohorte
 from .models_permissions import Permission, RolePermission
 
 
