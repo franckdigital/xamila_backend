@@ -4,47 +4,68 @@ Utilitaires pour vérifier l'accès aux cohortes et challenges épargne
 
 from .models import Cohorte
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
 
 User = get_user_model()
 
 def verifier_acces_challenge_actif(request):
     """
-    Vérifie si l'utilisateur a toujours accès au challenge épargne
-    en s'assurant que sa cohorte est toujours active
+    Vérifie si l'utilisateur a accès au challenge épargne via une cohorte active
+    
+    Args:
+        request: HttpRequest avec l'utilisateur authentifié
+        
+    Returns:
+        tuple: (acces_autorise: bool, message: str)
     """
     try:
-        # Vérifier si l'accès est activé en session
-        if not request.session.get('challenge_access_activated', False):
-            return False, "Accès au challenge non activé"
-        
-        # Récupérer le code de cohorte depuis la session
-        cohorte_code = request.session.get('challenge_cohorte_code')
-        if not cohorte_code:
-            return False, "Code de cohorte non trouvé en session"
-        
         user = request.user
+        
+        # Vérifier si l'utilisateur est authentifié
         if not user.is_authenticated:
             return False, "Utilisateur non authentifié"
         
-        # Vérifier que la cohorte existe et est toujours active
-        try:
-            cohorte = Cohorte.objects.get(
-                code=cohorte_code,
-                email_utilisateur=user.email,
-                user_id=user.id,
-                actif=True  # Vérification cruciale du statut actif
-            )
-            return True, f"Accès autorisé pour la cohorte {cohorte.nom}"
+        # Initialiser la session si elle n'existe pas (pour les tests)
+        if not hasattr(request, 'session'):
+            request.session = {}
+        
+        # Vérifier en session d'abord (cache)
+        session_key = f'challenge_access_{user.id}'
+        if session_key in request.session:
+            cached_access = request.session[session_key]
+            if cached_access.get('expires_at', 0) > timezone.now().timestamp():
+                return cached_access['access'], cached_access['message']
+        
+        # Vérifier l'accès via cohortes (relation many-to-many)
+        cohortes_actives = user.cohortes.filter(actif=True)
+        
+        if not cohortes_actives.exists():
+            # Vérifier s'il y a des cohortes inactives
+            cohortes_inactives = user.cohortes.filter(actif=False)
+            if cohortes_inactives.exists():
+                message = "Toutes les cohortes de l'utilisateur sont désactivées"
+            else:
+                message = "Aucune cohorte assignée à l'utilisateur"
             
-        except Cohorte.DoesNotExist:
-            # La cohorte n'existe plus ou a été désactivée
             # Nettoyer la session
-            request.session.pop('challenge_access_activated', None)
-            request.session.pop('challenge_cohorte_code', None)
-            return False, "Cohorte désactivée ou non trouvée"
-            
+            nettoyer_session_challenge(request, user.id)
+            return False, message
+        
+        # Accès autorisé - mettre en cache
+        cohorte_names = ", ".join([c.nom for c in cohortes_actives])
+        access_data = {
+            'access': True,
+            'message': f"Accès autorisé via cohorte(s): {cohorte_names}",
+            'expires_at': (timezone.now() + timedelta(minutes=30)).timestamp()
+        }
+        request.session[session_key] = access_data
+        
+        return True, access_data['message']
+        
     except Exception as e:
-        return False, f"Erreur lors de la vérification: {str(e)}"
+        error_message = f"Erreur lors de la vérification: {str(e)}"
+        return False, error_message
 
 def nettoyer_session_cohorte(request):
     """
@@ -52,6 +73,10 @@ def nettoyer_session_cohorte(request):
     """
     request.session.pop('challenge_access_activated', None)
     request.session.pop('challenge_cohorte_code', None)
+
+def nettoyer_session_challenge(request, user_id):
+    session_key = f'challenge_access_{user_id}'
+    request.session.pop(session_key, None)
 
 def decorator_verifier_acces_challenge(view_func):
     """

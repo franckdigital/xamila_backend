@@ -26,7 +26,7 @@ def test_cohort_access():
     print("\n📋 Current Cohorts Status:")
     cohorts = Cohorte.objects.all()
     for cohorte in cohorts:
-        users_count = User.objects.filter(cohorte=cohorte).count()
+        users_count = User.objects.filter(cohortes=cohorte).count()
         print(f"- {cohorte.nom}: Active={cohorte.actif}, Users={users_count}")
     
     # Test 2: Check demo user
@@ -36,11 +36,14 @@ def test_cohort_access():
         print(f"User: {demo_user.email}")
         print(f"Role: {demo_user.role}")
         
-        if hasattr(demo_user, 'cohorte') and demo_user.cohorte:
-            print(f"Cohort: {demo_user.cohorte.nom}")
-            print(f"Cohort Active: {demo_user.cohorte.actif}")
+        # Check user's cohorts (many-to-many relationship)
+        user_cohorts = demo_user.cohortes.all()
+        if user_cohorts.exists():
+            print(f"User has {user_cohorts.count()} cohort(s):")
+            for cohorte in user_cohorts:
+                print(f"  - {cohorte.nom}: Active={cohorte.actif}")
         else:
-            print("No cohort assigned")
+            print("No cohorts assigned")
             
     except User.DoesNotExist:
         print("Demo user not found")
