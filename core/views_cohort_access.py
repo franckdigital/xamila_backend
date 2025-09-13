@@ -75,9 +75,9 @@ def join_cohort_with_code(request):
         
         logger.info(f"Tentative d'adhésion cohorte pour {user.email} avec code: {code_cohorte}")
         
-        # Rechercher la cohorte par nom (le code correspond au nom)
+        # Rechercher la cohorte par code
         try:
-            cohorte = Cohorte.objects.get(nom__iexact=code_cohorte)
+            cohorte = Cohorte.objects.get(code__iexact=code_cohorte)
         except Cohorte.DoesNotExist:
             logger.warning(f"Code cohorte invalide: {code_cohorte}")
             return Response({
