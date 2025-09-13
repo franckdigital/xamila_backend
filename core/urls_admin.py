@@ -66,8 +66,8 @@ urlpatterns = [
     
     # CRUD cohortes
     path('cohortes/', views_cohortes.cohortes_list_create, name='admin_cohortes'),
-    path('cohortes/<int:cohorte_id>/update/', views_cohortes.update_cohorte, name='admin_update_cohorte'),
-    path('cohortes/<int:cohorte_id>/delete/', views_cohortes.delete_cohorte, name='admin_delete_cohorte'),
+    path('cohortes/<uuid:cohorte_id>/', views_cohortes.update_cohorte, name='admin_update_cohorte'),
+    path('cohortes/<uuid:cohorte_id>/delete/', views_cohortes.delete_cohorte, name='admin_delete_cohorte'),
     path('cohortes/<str:cohorte_code>/users/', views_cohortes.get_cohorte_users, name='admin_cohorte_users'),
     
     # ===== FONCTIONNALITÉS AVANCÉES =====

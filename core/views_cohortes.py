@@ -235,10 +235,47 @@ def update_cohorte(request, cohorte_id):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'PUT':
-            # Mise à jour complète (à implémenter si nécessaire)
+            # Mise à jour complète de la cohorte
+            data = request.data
+            
+            # Valider les champs requis
+            required_fields = ['mois', 'annee', 'email_utilisateur']
+            for field in required_fields:
+                if field not in data:
+                    return Response({
+                        'error': f'Le champ "{field}" est requis'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Mettre à jour les champs
+            cohorte.mois = data['mois']
+            cohorte.annee = data['annee']
+            cohorte.email_utilisateur = data['email_utilisateur']
+            
+            # Régénérer le nom si nécessaire
+            mois_noms = {
+                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+            }
+            cohorte.nom = f"Cohorte {mois_noms.get(cohorte.mois, 'Mois')} {cohorte.annee}"
+            
+            # Sauvegarder
+            cohorte.save()
+            
             return Response({
-                'message': 'Mise à jour complète des cohortes non implémentée'
-            }, status=status.HTTP_501_NOT_IMPLEMENTED)
+                'success': True,
+                'message': 'Cohorte mise à jour avec succès',
+                'cohorte': {
+                    'id': str(cohorte.id),
+                    'code': cohorte.code,
+                    'nom': cohorte.nom,
+                    'actif': cohorte.actif,
+                    'mois': cohorte.mois,
+                    'annee': cohorte.annee,
+                    'email_utilisateur': cohorte.email_utilisateur,
+                    'date_creation': cohorte.date_creation.isoformat()
+                }
+            })
 
     except Exception as e:
         return Response({
