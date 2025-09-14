@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
 from .models_savings_challenge import SavingsGoal
 
 
@@ -22,7 +22,33 @@ def verifier_activation_caisse(request):
     try:
         user = request.user
         
-        # Chercher les objectifs d'épargne de l'utilisateur
+        # Vérifier d'abord si l'utilisateur a un objectif mensuel défini
+        if user.monthly_savings_goal and user.monthly_savings_goal > 0:
+            # Calculer la date d'activation (21 jours après la définition de l'objectif)
+            if user.monthly_goal_set_date:
+                activation_date = user.monthly_goal_set_date.date() + timedelta(days=21)
+                is_activated = date.today() >= activation_date
+                
+                if is_activated:
+                    return Response({
+                        'caisse_activated': True,
+                        'message': 'Ma Caisse est activée',
+                        'activation_date': activation_date.isoformat(),
+                        'objectif_amount': float(user.monthly_savings_goal),
+                        'objectif_set_date': user.monthly_goal_set_date.isoformat()
+                    })
+                else:
+                    days_remaining = (activation_date - date.today()).days
+                    return Response({
+                        'caisse_activated': False,
+                        'message': f'Ma Caisse sera activée dans {days_remaining} jour(s)',
+                        'days_remaining': days_remaining,
+                        'activation_date': activation_date.isoformat(),
+                        'objectif_amount': float(user.monthly_savings_goal),
+                        'objectif_set_date': user.monthly_goal_set_date.isoformat()
+                    })
+        
+        # Fallback: chercher les objectifs d'épargne dans SavingsGoal (ancien système)
         objectifs = SavingsGoal.objects.filter(
             user=user,
             status='ACTIVE'
