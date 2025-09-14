@@ -27,11 +27,30 @@ def cohortes_list_create(request):
             }, status=status.HTTP_403_FORBIDDEN)
 
         if request.method == 'GET':
+            # Récupérer les paramètres de recherche et pagination
+            search_query = request.GET.get('search', '').strip()
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            
             # Récupérer toutes les cohortes existantes
             cohortes_queryset = Cohorte.objects.all().order_by('-annee', '-mois')
             
+            # Appliquer la recherche si fournie
+            if search_query:
+                cohortes_queryset = cohortes_queryset.filter(
+                    Q(nom__icontains=search_query) |
+                    Q(code__icontains=search_query) |
+                    Q(email_utilisateur__icontains=search_query)
+                )
+            
+            # Calculer la pagination
+            total_count = cohortes_queryset.count()
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_cohortes = cohortes_queryset[start_index:end_index]
+            
             cohortes = []
-            for cohorte in cohortes_queryset:
+            for cohorte in paginated_cohortes:
                 cohortes.append({
                     'id': str(cohorte.id),
                     'code': cohorte.code,
@@ -46,7 +65,10 @@ def cohortes_list_create(request):
 
             return Response({
                 'results': cohortes,
-                'count': len(cohortes)
+                'count': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_count + page_size - 1) // page_size
             })
 
         elif request.method == 'POST':
