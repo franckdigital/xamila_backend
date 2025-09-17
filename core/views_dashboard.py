@@ -229,7 +229,7 @@ def user_transactions_list(request):
             transaction_data = {
                 'id': str(transaction.id),
                 'type': transaction.get_transaction_type_display(),
-                'amount': f"{'+' if transaction.transaction_type in ['INVESTMENT', 'SAVINGS', 'DIVIDEND'] else '-'}{float(abs(transaction.amount)):,.0f} FCFA",
+                'amount': f"{'+' if transaction.transaction_type in ['INVESTMENT', 'SAVINGS', 'DIVIDEND'] else '-'}{float(abs(transaction.amount)):,.0f} FCFA".replace('/', '.'),
                 'amount_value': float(transaction.amount),
                 'date': transaction.created_at.strftime('%d %b %Y'),
                 'status': transaction.get_status_display(),

@@ -321,7 +321,7 @@ def savings_deposit(request):
             notification = create_notification(
                 recipient=user,
                 subject="Dépôt confirmé",
-                message=f"Votre dépôt de {montant:,} FCFA a été confirmé avec succès. Nouveau solde: {nouveau_solde} FCFA",
+                message=f"Votre dépôt de {montant:,} FCFA a été confirmé avec succès. Nouveau solde: {nouveau_solde} FCFA".replace('/', '.'),
                 notification_type='IN_APP',
                 priority='MEDIUM',
                 data={
@@ -339,7 +339,7 @@ def savings_deposit(request):
         
         response_data = {
             'success': True,
-            'message': f'Dépôt de {montant:,} FCFA effectué avec succès',
+            'message': f'Dépôt de {montant:,} FCFA effectué avec succès'.replace('/', '.'),
             'nouveau_solde': nouveau_solde,
             'reference': deposit.transaction_reference
         }
@@ -428,7 +428,7 @@ def savings_withdraw(request):
         
         response_data = {
             'success': True,
-            'message': f'Retrait de {montant:,} FCFA effectué avec succès',
+            'message': f'Retrait de {montant:,} FCFA effectué avec succès'.replace('/', '.'),
             'nouveau_solde': str(savings_account.balance),
             'reference': withdrawal.transaction_reference
         }
