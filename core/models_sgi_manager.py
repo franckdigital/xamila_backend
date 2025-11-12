@@ -43,7 +43,7 @@ class SGIManagerProfile(models.Model):
     sgi = models.ForeignKey(
         'SGI', 
         on_delete=models.CASCADE, 
-        related_name='managers'
+        related_name='manager_profiles'
     )
     
     # Informations professionnelles
@@ -314,7 +314,7 @@ class SGIClientRelationship(models.Model):
     sgi = models.ForeignKey(
         'SGI', 
         on_delete=models.CASCADE, 
-        related_name='client_relationships'
+        related_name='manager_client_relationships'
     )
     
     relationship_type = models.CharField(
