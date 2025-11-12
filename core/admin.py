@@ -11,6 +11,8 @@ from .models import (
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry, ResourceContent
 )
 from .models_permissions import Permission, RolePermission
+from .models_sgi_manager import SGIManagerProfile
+from .models_sgi import SGIManager, SGIManagerAssignment
 
 
 @admin.register(User)
@@ -435,3 +437,69 @@ class ResourceContentAdmin(admin.ModelAdmin):
 admin.site.site_header = "Administration Xamila"
 admin.site.site_title = "Xamila Admin"
 admin.site.index_title = "Gestion de la plateforme Xamila"
+
+
+# ===== SGI Manager administration =====
+@admin.register(SGIManagerProfile)
+class SGIManagerProfileAdmin(admin.ModelAdmin):
+    """
+    Permet à l'admin d'associer un utilisateur manager à une SGI (modèle SGIManagerProfile)
+    """
+    list_display = ['user', 'sgi', 'manager_type', 'permission_level', 'is_active', 'created_at']
+    list_filter = ['manager_type', 'permission_level', 'is_active', 'created_at']
+    search_fields = ['user__email', 'user__username', 'sgi__name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    fieldsets = (
+        ('Lien', {
+            'fields': ('id', 'user', 'sgi')
+        }),
+        ('Informations professionnelles', {
+            'fields': ('manager_type', 'employee_id', 'department', 'hire_date')
+        }),
+        ('Permissions', {
+            'fields': ('permission_level', 'can_approve_contracts', 'can_manage_clients', 'can_view_financials', 'can_generate_reports')
+        }),
+        ('Limites', {
+            'fields': ('max_contract_amount', 'max_daily_approvals')
+        }),
+        ('Statut', {
+            'fields': ('is_active', 'last_login_at')
+        }),
+        ('Dates', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(SGIManager)
+class SGIManagerAdmin(admin.ModelAdmin):
+    """
+    Modèle alternatif de manager (core/models_sgi.py). Lien avec SGIs via assignments.
+    """
+    list_display = ['user', 'professional_title', 'license_number', 'is_active', 'is_verified', 'total_managed_sgis']
+    list_filter = ['is_active', 'is_verified', 'created_at']
+    search_fields = ['user__email', 'user__username', 'license_number']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    fieldsets = (
+        ('Utilisateur', {'fields': ('id', 'user')}),
+        ('Profil', {'fields': ('professional_title', 'license_number', 'years_of_experience', 'specializations', 'certifications')}),
+        ('Contact', {'fields': ('professional_email', 'professional_phone')}),
+        ('Statut', {'fields': ('is_active', 'is_verified', 'verified_at', 'verified_by')}),
+        ('Dates', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
+    )
+
+
+@admin.register(SGIManagerAssignment)
+class SGIManagerAssignmentAdmin(admin.ModelAdmin):
+    """
+    Permet d'associer un SGIManager à une SGI et définir le rôle (PRIMARY, ...)
+    """
+    list_display = ['sgi', 'manager', 'role', 'is_active', 'assigned_at']
+    list_filter = ['role', 'is_active', 'assigned_at']
+    search_fields = ['sgi__name', 'manager__user__email', 'manager__user__username']
+    readonly_fields = ['id', 'assigned_at']
+    fieldsets = (
+        ('Assignation', {'fields': ('id', 'sgi', 'manager', 'role', 'permissions', 'is_active')}),
+        ('Métadonnées', {'fields': ('assigned_at', 'assigned_by'), 'classes': ('collapse',)}),
+    )
