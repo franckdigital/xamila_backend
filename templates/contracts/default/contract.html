@@ -1,0 +1,73 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #222; }
+    h1, h2, h3 { margin: 0; padding: 0; }
+    .section { margin: 16px 0; }
+    .box { border: 1px solid #ccc; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
+    .muted { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Convention d'ouverture de compte-titres</h1>
+  <div class="muted">Généré le {{ generated_at|date:"d/m/Y H:i" }}</div>
+
+  <div class="section box">
+    <h2>SGI</h2>
+    <p><strong>Nom:</strong> {{ sgi.name }}</p>
+    <p><strong>Adresse:</strong> {{ sgi.address }}</p>
+    <p><strong>Manager:</strong> {{ sgi.manager_name }} ({{ sgi.manager_email }})</p>
+  </div>
+
+  <div class="section box">
+    <h2>Client</h2>
+    <p><strong>Nom:</strong> {{ aor.full_name }}</p>
+    <p><strong>Email:</strong> {{ aor.email }}</p>
+    <p><strong>Téléphone:</strong> {{ aor.phone }}</p>
+    <p><strong>Résidence / Nationalité:</strong> {{ aor.country_of_residence }} / {{ aor.nationality }}</p>
+  </div>
+
+  <div class="section box">
+    <h2>Préférences</h2>
+    <table>
+      <tr><th>Ouverture 100% digitale</th><td>{% if aor.wants_digital_opening %}Oui{% else %}Non{% endif %}</td></tr>
+      <tr><th>En personne</th><td>{% if aor.wants_in_person_opening %}Oui{% else %}Non{% endif %}</td></tr>
+      <tr><th>Montant minimum disponible</th><td>{{ aor.available_minimum_amount }}</td></tr>
+      <tr><th>SGI 100% digitale</th><td>{% if aor.wants_100_percent_digital_sgi %}Oui{% else %}Non{% endif %}</td></tr>
+      <tr><th>Méthodes d'alimentation</th>
+        <td>
+          VISA: {% if aor.funding_by_visa %}Oui{% else %}Non{% endif %} |
+          Mobile Money: {% if aor.funding_by_mobile_money %}Oui{% else %}Non{% endif %} |
+          Virement: {% if aor.funding_by_bank_transfer %}Oui{% else %}Non{% endif %} |
+          Intermédiaire: {% if aor.funding_by_intermediary %}Oui{% else %}Non{% endif %} |
+          WU/MG/Ria: {% if aor.funding_by_wu_mg_ria %}Oui{% else %}Non{% endif %}
+        </td>
+      </tr>
+      <tr><th>Sources de revenus</th><td>{{ aor.sources_of_income }}</td></tr>
+      <tr><th>Profil investisseur</th><td>{{ aor.investor_profile }}</td></tr>
+    </table>
+  </div>
+
+  <div class="section box">
+    <h2>Conditions SGI</h2>
+    <table>
+      <tr><th>Pays</th><td>{{ terms.country }}</td></tr>
+      <tr><th>Ouverture digitale</th><td>{% if terms.is_digital_opening %}Oui{% else %}Non{% endif %}</td></tr>
+      <tr><th>Montant minimum</th><td>{% if terms.has_minimum_amount %}{{ terms.minimum_amount_value }}{% else %}Non{% endif %}</td></tr>
+      <tr><th>Frais d'ouverture</th><td>{% if terms.has_opening_fees %}{{ terms.opening_fees_amount }}{% else %}Non{% endif %}</td></tr>
+      <tr><th>Frais de garde</th><td>{{ terms.custody_fees }}</td></tr>
+      <tr><th>Frais de tenue de compte</th><td>{{ terms.account_maintenance_fees }}</td></tr>
+      <tr><th>Méthodes de rachat</th><td>{% if terms.redemption_methods %}{{ terms.redemption_methods|join:", " }}{% endif %}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <p class="muted">Document généré automatiquement par Xamila.</p>
+  </div>
+</body>
+</html>

@@ -533,3 +533,192 @@ class SGIPerformance(models.Model):
     
     def __str__(self):
         return f"{self.sgi.name} - {self.period_type} {self.period_start} to {self.period_end}"
+
+
+class SGIAccountTerms(models.Model):
+    """
+    Conditions et informations d'ouverture de compte titre pour une SGI
+    Utilisé par le comparateur et l'affichage détaillé
+    """
+
+    PAYMENT_METHODS = [
+        ("BANK_TRANSFER", "Virement bancaire"),
+        ("MOBILE_MONEY", "Mobile Money"),
+        ("VISA", "Carte Visa"),
+        ("CASH", "Espèces"),
+        ("CHECK", "Chèque"),
+    ]
+
+    REDEMPTION_METHODS = [
+        ("BANK_TRANSFER", "Rachat par virement"),
+        ("MOBILE_MONEY", "Rachat par mobile money"),
+        ("CHECK", "Rachat par chèque"),
+        ("VISA", "Rachat Visa"),
+    ]
+
+    sgi = models.OneToOneField(BaseSGI, on_delete=models.CASCADE, related_name="account_terms")
+
+    # Localisation et identité
+    country = models.CharField(max_length=100, verbose_name="Pays")
+    headquarters_address = models.CharField(max_length=255, verbose_name="Adresse du siège")
+    director_name = models.CharField(max_length=150, verbose_name="Nom du dirigeant")
+    profile = models.TextField(verbose_name="Présentation/Profil de la SGI")
+
+    # Montant minimum et frais d'ouverture
+    has_minimum_amount = models.BooleanField(default=False)
+    minimum_amount_value = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    has_opening_fees = models.BooleanField(default=False)
+    opening_fees_amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+
+    # Modalités d'ouverture
+    is_digital_opening = models.BooleanField(default=True, help_text="Ouverture 100% à distance")
+
+    # Méthodes d'alimentation/dépôt
+    deposit_methods = models.JSONField(default=list, help_text="Liste parmi PAYMENT_METHODS")
+
+    # Filiale bancaire
+    is_bank_subsidiary = models.BooleanField(default=False)
+    parent_bank_name = models.CharField(max_length=150, blank=True, null=True)
+
+    # Frais de garde et tenue de compte
+    custody_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Frais de garde (FCFA ou %)")
+    account_maintenance_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Frais de tenue de compte (FCFA ou %)")
+
+    # Frais de courtage
+    brokerage_fees_transactions_ordinary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    brokerage_fees_files = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    brokerage_fees_transactions = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    # Frais de transfert
+    transfer_account_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    transfer_securities_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    # Frais de nantissement
+    pledge_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+
+    # Méthodes de rachat
+    redemption_methods = models.JSONField(default=list, help_text="Liste parmi REDEMPTION_METHODS")
+
+    # Banques compatibles (si avantage client)
+    preferred_customer_banks = models.JSONField(default=list, help_text="Noms de banques partenaires/compatibles")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Conditions d'ouverture de compte SGI"
+        verbose_name_plural = "Conditions d'ouverture de compte SGI"
+
+    def __str__(self):
+        return f"Terms - {self.sgi.name}"
+
+
+class SGIRating(models.Model):
+    """
+    Notation de la réactivité/qualité de service d'une SGI par les clients
+    """
+
+    sgi = models.ForeignKey(BaseSGI, on_delete=models.CASCADE, related_name="ratings")
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sgi_ratings", limit_choices_to={"role": "CUSTOMER"})
+    score = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["sgi", "customer"]
+        indexes = [
+            models.Index(fields=["sgi"]),
+            models.Index(fields=["customer"]),
+        ]
+
+    def __str__(self):
+        return f"Rating {self.score}/5 - {self.sgi.name} by {self.customer.get_full_name()}"
+
+
+class AccountOpeningRequest(models.Model):
+    """
+    Demande de mise en relation / ouverture de compte titre
+    Contient les champs du formulaire et les pièces KYC
+    """
+
+    FUNDING_CHOICES = [
+        ("VISA", "Par Carte Visa"),
+        ("MOBILE_MONEY", "Par Mobile Money"),
+        ("BANK_TRANSFER", "Par Virement Bancaire"),
+        ("INTERMEDIARY", "Par un intermédiaire/mandataire"),
+        ("WU_MG_RIA", "Par WU, Money Gram, Ria"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account_opening_requests", limit_choices_to={"role": "CUSTOMER"})
+    sgi = models.ForeignKey(BaseSGI, on_delete=models.SET_NULL, blank=True, null=True, related_name="account_opening_requests")
+
+    # Coordonnées
+    full_name = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone = models.CharField(max_length=30)
+    is_phone_linked_to_kyc_mobile_money = models.BooleanField(default=False)
+    alternate_kyc_mobile_money_phone = models.CharField(max_length=30, blank=True, null=True)
+
+    # Pays
+    country_of_residence = models.CharField(max_length=100)
+    nationality = models.CharField(max_length=100)
+
+    # Banque du client
+    customer_banks_current_account = models.JSONField(default=list, help_text="Liste des banques avec compte courant")
+
+    # Préférences d'ouverture
+    wants_digital_opening = models.BooleanField(default=True)
+    wants_in_person_opening = models.BooleanField(default=False)
+    available_minimum_amount = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    wants_100_percent_digital_sgi = models.BooleanField(default=False)
+
+    # Méthodes d'alimentation
+    funding_by_visa = models.BooleanField(default=False)
+    funding_by_mobile_money = models.BooleanField(default=False)
+    funding_by_bank_transfer = models.BooleanField(default=False)
+    funding_by_intermediary = models.BooleanField(default=False)
+    funding_by_wu_mg_ria = models.BooleanField(default=False)
+    wants_xamila_as_intermediary = models.BooleanField(default=False)
+
+    # Préférences coûts/qualité
+    prefer_service_quality_over_fees = models.BooleanField(default=True)
+
+    # LAB - Sources de revenus
+    sources_of_income = models.TextField()
+
+    # Profil d'investisseur
+    INVESTOR_PROFILE_CHOICES = [
+        ("PRUDENT", "Prudent"),
+        ("AUDACIOUS", "Audacieux"),
+        ("MODERATE", "Modéré"),
+    ]
+    investor_profile = models.CharField(max_length=20, choices=INVESTOR_PROFILE_CHOICES)
+
+    # KYC (+IA)
+    holder_info = models.TextField(blank=True, help_text="Infos sur le titulaire du compte")
+    photo = models.ImageField(upload_to="kyc/account_opening/photos/", blank=True, null=True)
+    id_card_scan = models.FileField(upload_to="kyc/account_opening/id_scans/", blank=True, null=True)
+
+    # Xamila+
+    wants_xamila_plus = models.BooleanField(default=False)
+    authorize_xamila_to_receive_account_info = models.BooleanField(default=False)
+
+    # Métadonnées
+    status = models.CharField(max_length=20, default="PENDING")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Demande d'ouverture de compte titre"
+        verbose_name_plural = "Demandes d'ouverture de compte titre"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["customer"]),
+            models.Index(fields=["sgi"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return f"AccountOpeningRequest {self.id} - {self.full_name}"

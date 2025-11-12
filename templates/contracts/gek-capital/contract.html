@@ -1,0 +1,88 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11.5px; color: #222; }
+    h1, h2, h3 { margin: 0; padding: 0; }
+    .title { text-align: center; margin: 8px 0 16px; font-size: 18px; font-weight: 700; }
+    .section { margin: 14px 0; }
+    .box { border: 1px solid #bfc3ca; padding: 10px 12px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #d6dae1; padding: 6px; vertical-align: top; }
+    .muted { color: #666; }
+    .small { font-size: 10px; }
+    .page-break { page-break-before: always; }
+    .list { margin: 6px 0 6px 16px; }
+  </style>
+</head>
+<body>
+  <div class="title">Convention d’ouverture de compte-titres — GEK CAPITAL</div>
+  <div class="muted small">Généré le {{ generated_at|date:"d/m/Y H:i" }} | SGI: {{ sgi.name }}</div>
+
+  <div class="section box">
+    <h2>Entre les Parties</h2>
+    <p><strong>SGI:</strong> {{ sgi.name }}, {{ sgi.address }} — Directeur: {{ terms.director_name }}</p>
+    <p><strong>Titulaire:</strong> {{ aor.full_name }} — Email: {{ aor.email }} — Tél: {{ aor.phone }}</p>
+    <p><strong>Résidence / Nationalité:</strong> {{ aor.country_of_residence }} / {{ aor.nationality }}</p>
+  </div>
+
+  <div class="section">
+    <h3>I. Exposé préalable</h3>
+    <div class="small muted">Résumé conforme au modèle: risques de marché, non-garantie de performance, informations de recherche non-conseil.</div>
+  </div>
+
+  <div class="section">
+    <h3>II. Conditions générales</h3>
+    <table>
+      <tr><th>Ouverture digitale</th><td>{% if terms.is_digital_opening %}Oui{% else %}Non{% endif %}</td></tr>
+      <tr><th>Montant minimum d’ouverture</th><td>{% if terms.has_minimum_amount %}{{ terms.minimum_amount_value }}{% else %}Non{% endif %}</td></tr>
+      <tr><th>Frais d’ouverture</th><td>{% if terms.has_opening_fees %}{{ terms.opening_fees_amount }}{% else %}Non{% endif %}</td></tr>
+      <tr><th>Frais de garde</th><td>{{ terms.custody_fees }}</td></tr>
+      <tr><th>Tenue de compte</th><td>{{ terms.account_maintenance_fees }}</td></tr>
+      <tr><th>Méthodes de dépôt</th><td>{% if terms.deposit_methods %}{{ terms.deposit_methods|join:", " }}{% endif %}</td></tr>
+      <tr><th>Méthodes de rachat</th><td>{% if terms.redemption_methods %}{{ terms.redemption_methods|join:", " }}{% endif %}</td></tr>
+    </table>
+  </div>
+
+  <div class="section box">
+    <h3>Profil & Préférences du titulaire</h3>
+    <ul class="list">
+      <li>Ouverture 100% digitale: {% if aor.wants_digital_opening %}Oui{% else %}Non{% endif %}</li>
+      <li>En personne: {% if aor.wants_in_person_opening %}Oui{% else %}Non{% endif %}</li>
+      <li>Montant disponible: {{ aor.available_minimum_amount }}</li>
+      <li>Investisseur: {{ aor.investor_profile }}</li>
+      <li>Méthodes d'alimentation: VISA({% if aor.funding_by_visa %}Oui{% else %}Non{% endif %}), MM({% if aor.funding_by_mobile_money %}Oui{% else %}Non{% endif %}), Virement({% if aor.funding_by_bank_transfer %}Oui{% else %}Non{% endif %}), Intermédiaire({% if aor.funding_by_intermediary %}Oui{% else %}Non{% endif %}), WU/MG/Ria({% if aor.funding_by_wu_mg_ria %}Oui{% else %}Non{% endif %})</li>
+    </ul>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="section">
+    <h3>Annexe 1 — Formulaire d’ouverture (synthèse)</h3>
+    <table>
+      <tr><th>Nom complet</th><td>{{ aor.full_name }}</td></tr>
+      <tr><th>Email</th><td>{{ aor.email }}</td></tr>
+      <tr><th>Téléphone</th><td>{{ aor.phone }}</td></tr>
+      <tr><th>Adresse (résidence)</th><td>{{ aor.country_of_residence }}</td></tr>
+      <tr><th>Banques avec compte courant</th><td>{% if aor.customer_banks_current_account %}{{ aor.customer_banks_current_account|join:", " }}{% endif %}</td></tr>
+      <tr><th>Sources de revenus</th><td>{{ aor.sources_of_income }}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Annexe 2 — Conditions tarifaires (extrait)</h3>
+    <div class="small muted">Renseigner via SGIAccountTerms (ou référencer la grille SGI).</div>
+  </div>
+
+  <div class="section">
+    <h3>Annexe 3 — Contacts</h3>
+    <p>{{ sgi.name }} — {{ sgi.address }} — Manager: {{ sgi.manager_name }} ({{ sgi.manager_email }})</p>
+  </div>
+
+  <div class="section">
+    <p class="small muted">Ce document reprend la structure du modèle GEK CAPITAL et est auto-généré pour la mise en relation.</p>
+  </div>
+</body>
+</html>

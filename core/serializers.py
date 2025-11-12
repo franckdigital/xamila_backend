@@ -9,6 +9,7 @@ from .models import (
     OTP, Contract, QuizQuestion, QuizSubmission, Stock, ResourceContent,
     Cohorte
 )
+from .models_sgi import SGIAccountTerms, SGIRating, AccountOpeningRequest
 from .models_permissions import Permission, RolePermission
 
 
@@ -41,6 +42,21 @@ class SGISerializer(serializers.ModelSerializer):
             'is_active', 'is_verified', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class SGIAccountTermsSerializer(serializers.ModelSerializer):
+    """Serializer pour les conditions d'ouverture de compte titre"""
+    class Meta:
+        model = SGIAccountTerms
+        fields = [
+            'country', 'headquarters_address', 'director_name', 'profile',
+            'has_minimum_amount', 'minimum_amount_value', 'has_opening_fees', 'opening_fees_amount',
+            'is_digital_opening', 'deposit_methods', 'is_bank_subsidiary', 'parent_bank_name',
+            'custody_fees', 'account_maintenance_fees',
+            'brokerage_fees_transactions_ordinary', 'brokerage_fees_files', 'brokerage_fees_transactions',
+            'transfer_account_fees', 'transfer_securities_fees', 'pledge_fees', 'redemption_methods',
+            'preferred_customer_banks'
+        ]
 
 
 class SGIListSerializer(serializers.ModelSerializer):
@@ -105,6 +121,61 @@ class ClientInvestmentProfileCreateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class AccountOpeningRequestSerializer(serializers.ModelSerializer):
+    """Serializer lecture des demandes d'ouverture de compte"""
+    customer = UserSerializer(read_only=True)
+    sgi = SGIListSerializer(read_only=True)
+    class Meta:
+        model = AccountOpeningRequest
+        fields = [
+            'id', 'customer', 'sgi', 'full_name', 'email', 'phone',
+            'is_phone_linked_to_kyc_mobile_money', 'alternate_kyc_mobile_money_phone',
+            'country_of_residence', 'nationality', 'customer_banks_current_account',
+            'wants_digital_opening', 'wants_in_person_opening', 'available_minimum_amount', 'wants_100_percent_digital_sgi',
+            'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria', 'wants_xamila_as_intermediary',
+            'prefer_service_quality_over_fees', 'sources_of_income', 'investor_profile',
+            'holder_info', 'photo', 'id_card_scan',
+            'wants_xamila_plus', 'authorize_xamila_to_receive_account_info',
+            'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'customer', 'sgi', 'status', 'created_at', 'updated_at']
+
+
+class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
+    """Serializer création de demande d'ouverture de compte (SGI optionnelle)"""
+    sgi_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
+    class Meta:
+        model = AccountOpeningRequest
+        fields = [
+            'sgi_id', 'full_name', 'email', 'phone',
+            'is_phone_linked_to_kyc_mobile_money', 'alternate_kyc_mobile_money_phone',
+            'country_of_residence', 'nationality', 'customer_banks_current_account',
+            'wants_digital_opening', 'wants_in_person_opening', 'available_minimum_amount', 'wants_100_percent_digital_sgi',
+            'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria', 'wants_xamila_as_intermediary',
+            'prefer_service_quality_over_fees', 'sources_of_income', 'investor_profile',
+            'holder_info', 'photo', 'id_card_scan', 'wants_xamila_plus', 'authorize_xamila_to_receive_account_info'
+        ]
+    def validate(self, attrs):
+        # exiger au moins une méthode d'alimentation
+        if not any([
+            attrs.get('funding_by_visa'), attrs.get('funding_by_mobile_money'),
+            attrs.get('funding_by_bank_transfer'), attrs.get('funding_by_intermediary'), attrs.get('funding_by_wu_mg_ria')
+        ]):
+            raise serializers.ValidationError("Sélectionnez au moins une méthode d'alimentation")
+        return attrs
+    def create(self, validated_data):
+        user = self.context['request'].user
+        sgi_id = validated_data.pop('sgi_id', None)
+        sgi = None
+        if sgi_id:
+            try:
+                sgi = SGI.objects.get(id=sgi_id)
+            except SGI.DoesNotExist:
+                raise serializers.ValidationError({'sgi_id': 'SGI introuvable'})
+        instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
+        return instance
+
+
 class SGIMatchingRequestSerializer(serializers.ModelSerializer):
     """Serializer pour les demandes de matching SGI"""
     
@@ -135,6 +206,34 @@ class SGIMatchingResultSerializer(serializers.Serializer):
     entry_fees = serializers.DecimalField(max_digits=5, decimal_places=2)
     logo = serializers.ImageField(allow_null=True)
     website = serializers.URLField(allow_null=True)
+
+
+class SGIRatingSerializer(serializers.ModelSerializer):
+    """Serializer pour affichage de notation SGI"""
+    customer = UserSerializer(read_only=True)
+    class Meta:
+        model = SGIRating
+        fields = ['id', 'sgi', 'customer', 'score', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'customer', 'created_at', 'updated_at']
+
+
+class SGIRatingCreateSerializer(serializers.ModelSerializer):
+    """Serializer pour créer/mettre à jour une note de SGI"""
+    class Meta:
+        model = SGIRating
+        fields = ['sgi', 'score', 'comment']
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['customer'] = user
+        # upsert unique (sgi, customer)
+        rating, _created = SGIRating.objects.update_or_create(
+            sgi=validated_data['sgi'], customer=user,
+            defaults={
+                'score': validated_data['score'],
+                'comment': validated_data.get('comment', '')
+            }
+        )
+        return rating
 
 
 class ClientSGIInteractionSerializer(serializers.ModelSerializer):
@@ -480,6 +579,48 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
         fields = ['id', 'role', 'permission', 'is_granted']
+
+
+class ContractSerializer(serializers.ModelSerializer):
+    """Serializer lecture des contrats"""
+    customer = UserSerializer(read_only=True)
+    sgi = SGIListSerializer(read_only=True)
+    class Meta:
+        model = Contract
+        fields = [
+            'id', 'contract_number', 'customer', 'sgi', 'investment_amount', 'funding_source',
+            'bank_name', 'account_number', 'status', 'customer_notes', 'manager_notes', 'rejection_reason',
+            'created_at', 'updated_at', 'approved_at', 'rejected_at'
+        ]
+        read_only_fields = ['id', 'contract_number', 'customer', 'sgi', 'status', 'created_at', 'updated_at', 'approved_at', 'rejected_at']
+
+
+class ContractCreateSerializer(serializers.ModelSerializer):
+    """Serializer création d'un contrat (soumission one-click)"""
+    sgi_id = serializers.UUIDField(write_only=True)
+    class Meta:
+        model = Contract
+        fields = ['sgi_id', 'investment_amount', 'funding_source', 'bank_name', 'account_number', 'customer_notes']
+    def validate(self, attrs):
+        return attrs
+    def create(self, validated_data):
+        user = self.context['request'].user
+        sgi_id = validated_data.pop('sgi_id')
+        try:
+            sgi = SGI.objects.get(id=sgi_id, is_active=True)
+        except SGI.DoesNotExist:
+            raise serializers.ValidationError({'sgi_id': 'SGI introuvable'})
+        contract = Contract.objects.create(customer=user, sgi=sgi, **validated_data)
+        return contract
+
+
+class ContractPrefillResponseSerializer(serializers.Serializer):
+    """Données préremplies pour le contrat et pièces à fournir"""
+    suggested_investment_amount = serializers.DecimalField(max_digits=15, decimal_places=2)
+    suggested_funding_source = serializers.ChoiceField(choices=Contract.FUNDING_SOURCES)
+    required_documents = serializers.ListField(child=serializers.CharField())
+    sgi = SGIListSerializer()
+    terms = SGIAccountTermsSerializer()
 
 
 class CohorteSerializer(serializers.ModelSerializer):

@@ -63,6 +63,7 @@ urlpatterns = [
     # Liste et détails des SGI
     path('sgis/', views.SGIListView.as_view(), name='sgi-list'),
     path('sgis/<uuid:pk>/', views.SGIDetailView.as_view(), name='sgi-detail'),
+    path('sgis/comparator/', views.SGIComparatorView.as_view(), name='sgi-comparator'),
     
     # === ENDPOINTS PROFIL CLIENT ===
     
@@ -83,11 +84,20 @@ urlpatterns = [
     
     # Sélection d'une SGI
     path('sgi/select/', views.SGISelectionView.as_view(), name='sgi-selection'),
+    path('sgi/rating/', views.SGIRatingView.as_view(), name='sgi-rating'),
     
     # === ENDPOINTS INTERACTIONS CLIENT ===
     
     # Interactions du client connecté
     path('interactions/', views.ClientInteractionsView.as_view(), name='client-interactions'),
+
+    # === ENDPOINTS OUVERTURE COMPTE TITRE ===
+    path('account-opening/request/', views.AccountOpeningRequestCreateView.as_view(), name='account-opening-request-create'),
+    path('account-opening/requests/', views.AccountOpeningRequestListView.as_view(), name='account-opening-requests'),
+    path('account-opening/prefill/<uuid:sgi_id>/', views.ContractPrefillView.as_view(), name='contract-prefill'),
+    path('account-opening/submit/', views.ContractSubmitOneClickView.as_view(), name='contract-submit-oneclick'),
+    path('account-opening/authorize/', views.XamilaAuthorizationToggleView.as_view(), name='xamila-authorization-toggle'),
+    path('account-opening/contract/pdf/', views.ContractPDFGenerateView.as_view(), name='contract-pdf-generate'),
     
     # === ENDPOINTS DASHBOARD ===
     # Dashboard URLs

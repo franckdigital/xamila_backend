@@ -15,15 +15,19 @@ from .models import (
     SGI, ClientInvestmentProfile, SGIMatchingRequest,
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry
 )
+from .models_sgi import SGIAccountTerms, SGIRating, AccountOpeningRequest
 from .serializers import (
     SGISerializer, SGIListSerializer, ClientInvestmentProfileSerializer,
     ClientInvestmentProfileCreateSerializer, SGIMatchingRequestSerializer,
     SGIMatchingResultSerializer, ClientSGIInteractionSerializer,
     ClientSGIInteractionCreateSerializer, EmailNotificationSerializer,
     AdminDashboardEntrySerializer, MatchingCriteriaSerializer,
-    SGISelectionSerializer, SGIStatisticsSerializer, ClientStatisticsSerializer
+    SGISelectionSerializer, SGIStatisticsSerializer, ClientStatisticsSerializer,
+    SGIAccountTermsSerializer, SGIRatingSerializer, SGIRatingCreateSerializer,
+    AccountOpeningRequestSerializer, AccountOpeningRequestCreateSerializer
 )
 from .services import SGIMatchingService, EmailNotificationService
+from .services_pdf import ContractPDFService
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +276,263 @@ class SGISelectionView(APIView):
                 {'error': 'Erreur interne lors de la sélection'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class SGIComparatorView(APIView):
+    """
+    Comparateur et tri des SGI basé sur les conditions d'ouverture et filtres
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = SGI.objects.filter(is_active=True)
+        terms = SGIAccountTerms.objects.select_related('sgi').filter(sgi__in=qs)
+
+        # Filtres
+        country = request.query_params.get('country')
+        bank_name = request.query_params.get('bank')
+        sgi_name = request.query_params.get('sgi_name')
+        digital_only = request.query_params.get('digital_only')
+
+        if country:
+            terms = terms.filter(country__iexact=country)
+        if sgi_name:
+            terms = terms.filter(sgi__name__icontains=sgi_name)
+        if digital_only == 'true':
+            terms = terms.filter(is_digital_opening=True)
+        if bank_name:
+            terms = terms.filter(preferred_customer_banks__icontains=bank_name)
+
+        # Tri
+        order_by = request.query_params.get('order_by', 'minimum_amount_value')
+        direction = '' if request.query_params.get('order', 'asc') == 'asc' else '-'
+        safe_fields = {
+            'minimum_amount_value': 'minimum_amount_value',
+            'opening_fees_amount': 'opening_fees_amount',
+            'custody_fees': 'custody_fees',
+        }
+        if order_by in safe_fields:
+            terms = terms.order_by(f"{direction}{safe_fields[order_by]}")
+
+        data = []
+        for t in terms:
+            s = t.sgi
+            data.append({
+                'sgi': SGIListSerializer(s).data,
+                'terms': SGIAccountTermsSerializer(t).data,
+                'avg_rating': float(SGIRating.objects.filter(sgi=s).aggregate(Avg('score'))['score__avg'] or 0),
+                'ratings_count': SGIRating.objects.filter(sgi=s).count(),
+            })
+        return Response({'results': data, 'total': len(data)})
+
+
+class SGIRatingView(APIView):
+    """
+    Création/mise à jour de la note d'une SGI par le client
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = SGIRatingCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            rating = serializer.save()
+            return Response(SGIRatingSerializer(rating).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountOpeningRequestCreateView(APIView):
+    """
+    Création de la demande d'ouverture de compte titre (SGI optionnelle)
+    Envoie des emails à la SGI (si fournie), au client et à Xamila
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = AccountOpeningRequestCreateSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            req_obj = serializer.save()
+
+            # Emails
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com')
+            xamila_email = getattr(settings, 'XAMILA_CONTACT_EMAIL', 'contact@xamila.com')
+
+            # Client confirmation
+            send_mail(
+                subject='Xamila - Confirmation de votre demande d\'ouverture de compte titre',
+                message=f"Bonjour {req_obj.full_name},\n\nVotre demande a été reçue. Nous vous recontacterons sous 48h.",
+                from_email=from_email,
+                recipient_list=[req_obj.email],
+                fail_silently=True,
+            )
+
+            # Notification SGI si choisie
+            if req_obj.sgi:
+                send_mail(
+                    subject='Xamila - Nouvelle demande de mise en relation client',
+                    message=(
+                        f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
+                        f"Pays résidence: {req_obj.country_of_residence} - Nationalité: {req_obj.nationality}\n"
+                        f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
+                        f"Préférences: digital={req_obj.wants_digital_opening}, en_personne={req_obj.wants_in_person_opening}\n"
+                    ),
+                    from_email=from_email,
+                    recipient_list=[req_obj.sgi.manager_email],
+                    fail_silently=True,
+                )
+
+            # Copie Xamila
+            send_mail(
+                subject='Xamila - Nouvelle demande ouverture de compte',
+                message=f"Demande #{req_obj.id} par {req_obj.full_name} ({req_obj.email})",
+                from_email=from_email,
+                recipient_list=[xamila_email],
+                fail_silently=True,
+            )
+
+            return Response(AccountOpeningRequestSerializer(req_obj).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur création AccountOpeningRequest: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ContractPDFGenerateView(APIView):
+    """
+    Génère un PDF prérempli depuis AccountOpeningRequest + SGI (+ Terms)
+    POST body: { account_opening_request_id?: uuid }
+    Si non fourni: prend la dernière demande du client.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from .models_sgi import AccountOpeningRequest
+        aor_id = request.data.get('account_opening_request_id')
+        try:
+            if aor_id:
+                aor = AccountOpeningRequest.objects.get(id=aor_id, customer=request.user)
+            else:
+                aor = AccountOpeningRequest.objects.filter(customer=request.user).order_by('-created_at').first()
+            if not aor:
+                return Response({'error': 'Aucune demande trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+            service = ContractPDFService()
+            ctx = service.build_context(aor)
+            html = service.render_html(ctx)
+            filename = f"contrat_{aor.id}.pdf"
+            return service.generate_pdf_response(html, filename)
+        except AccountOpeningRequest.DoesNotExist:
+            return Response({'error': 'Demande introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Erreur génération PDF: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AccountOpeningRequestListView(generics.ListAPIView):
+    """
+    Liste des demandes d'ouverture de compte du client connecté
+    """
+    serializer_class = AccountOpeningRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return AccountOpeningRequest.objects.filter(customer=self.request.user).order_by('-created_at')
+
+
+class ContractPrefillView(APIView):
+    """
+    Préremplissage du contrat après sélection SGI (Mise en relation élaborée)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, sgi_id):
+        try:
+            sgi = get_object_or_404(SGI, id=sgi_id, is_active=True)
+            terms = getattr(sgi, 'account_terms', None)
+
+            # Heuristique de préremplissage
+            client_profile = getattr(request.user, 'investment_profile', None)
+            suggested_amount = client_profile.investment_amount if client_profile else sgi.min_investment_amount
+
+            # Déterminer une source de financement suggérée
+            funding_source = 'BANK_TRANSFER'
+            if terms and 'MOBILE_MONEY' in (terms.deposit_methods or []):
+                funding_source = 'MOBILE_MONEY'
+            elif terms and 'VISA' in (terms.deposit_methods or []):
+                funding_source = 'VISA'
+
+            required_docs = [
+                'Formulaire d\'ouverture de compte signé',
+                'Copie CNI/Passeport',
+                'Justificatif de domicile',
+                'Justificatif de revenus',
+            ]
+
+            payload = {
+                'suggested_investment_amount': suggested_amount,
+                'suggested_funding_source': funding_source,
+                'required_documents': required_docs,
+                'sgi': SGIListSerializer(sgi).data,
+                'terms': SGIAccountTermsSerializer(terms).data if terms else None,
+            }
+            serializer = ContractPrefillResponseSerializer(payload)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Erreur prefill contrat: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ContractSubmitOneClickView(APIView):
+    """
+    Soumission one-click: crée un Contrat et notifie la SGI
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ContractCreateSerializer(data=request.data, context={'request': request})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            contract = serializer.save()
+
+            # Notifier SGI
+            send_mail(
+                subject=f"Xamila - Nouveau contrat à valider ({contract.contract_number})",
+                message=(
+                    f"Client: {contract.customer.full_name} ({contract.customer.email})\n"
+                    f"Montant: {contract.investment_amount} - Source: {contract.funding_source}\n"
+                ),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com'),
+                recipient_list=[contract.sgi.manager_email],
+                fail_silently=True,
+            )
+
+            return Response(ContractSerializer(contract).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur soumission contrat: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class XamilaAuthorizationToggleView(APIView):
+    """
+    Autorisation client pour que Xamila reçoive les infos de compte une fois ouvert
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Lie l'autorisation à la dernière AccountOpeningRequest du client
+        try:
+            aor = AccountOpeningRequest.objects.filter(customer=request.user).order_by('-created_at').first()
+            if not aor:
+                return Response({'error': 'Aucune demande trouvée'}, status=status.HTTP_400_BAD_REQUEST)
+            value = request.data.get('authorize', True)
+            aor.authorize_xamila_to_receive_account_info = bool(value)
+            aor.save(update_fields=['authorize_xamila_to_receive_account_info', 'updated_at'])
+            return Response({'authorized': aor.authorize_xamila_to_receive_account_info})
+        except Exception as e:
+            logger.error(f"Erreur autorisation Xamila+: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ClientInteractionsView(generics.ListAPIView):
