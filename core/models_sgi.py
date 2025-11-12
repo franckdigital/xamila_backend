@@ -132,7 +132,7 @@ class SGIManagerAssignment(models.Model):
     ]
     
     # Relations
-    sgi = models.ForeignKey(SGI, on_delete=models.CASCADE, related_name='manager_assignments')
+    sgi = models.ForeignKey(BaseSGI, on_delete=models.CASCADE, related_name='manager_assignments')
     manager = models.ForeignKey(SGIManager, on_delete=models.CASCADE, related_name='sgi_assignments')
     
     # Rôle et permissions
@@ -203,7 +203,7 @@ class ClientSGIRelationship(models.Model):
         related_name='sgi_relationships',
         limit_choices_to={'role': 'CUSTOMER'}
     )
-    sgi = models.ForeignKey(SGI, on_delete=models.CASCADE, related_name='client_relationships')
+    sgi = models.ForeignKey(BaseSGI, on_delete=models.CASCADE, related_name='client_relationships')
     assigned_manager = models.ForeignKey(
         SGIManager, 
         on_delete=models.SET_NULL, 
@@ -288,7 +288,7 @@ class SGIPerformance(models.Model):
     ]
     
     # Relations
-    sgi = models.ForeignKey(SGI, on_delete=models.CASCADE, related_name='performance_records')
+    sgi = models.ForeignKey(BaseSGI, on_delete=models.CASCADE, related_name='performance_records')
     
     # Période
     period_type = models.CharField(max_length=20, choices=PERIOD_CHOICES)
