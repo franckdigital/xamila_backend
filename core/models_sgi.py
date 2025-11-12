@@ -40,7 +40,7 @@ class SGIManager(models.Model):
     
     # SGI gérées
     managed_sgis = models.ManyToManyField(
-        SGI, 
+        BaseSGI, 
         through='SGIManagerAssignment',
         related_name='managers'
     )
