@@ -44,6 +44,7 @@ urlpatterns = [
     
     # Liste et gestion des SGI
     path('sgis/', views_admin.admin_sgi_list, name='admin_sgi_list'),
+    path('sgis/create/', views_admin.admin_create_sgi, name='admin_create_sgi'),
     path('sgis/<uuid:sgi_id>/action/', views_admin.admin_sgi_action, name='admin_sgi_action'),
     
     # ===== GESTION DU CONTENU E-LEARNING =====

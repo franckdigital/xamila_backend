@@ -17,6 +17,8 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, UpdateAPIView,
 from rest_framework.pagination import PageNumberPagination
 
 from .models import User, SGI, Contract, QuizQuestion, OTP, RefreshToken, SavingsChallenge, ChallengeParticipation, SavingsDeposit
+from .models_sgi_manager import SGIManagerProfile
+from .models_sgi import SGIManager, SGIManagerAssignment
 from .serializers import UserSerializer
 from .permissions import IsAdminUser
 
@@ -194,6 +196,29 @@ def admin_user_action(request, user_id):
     if action == 'activate':
         user.is_active = True
         user.save()
+        
+        # Si on reçoit un sgi_id et que le user est SGI_MANAGER, lier la SGI
+        sgi_id = data.get('sgi_id')
+        if sgi_id and (data.get('role') == 'SGI_MANAGER' or user.role == 'SGI_MANAGER'):
+            try:
+                sgi = SGI.objects.get(id=sgi_id)
+                SGIManagerProfile.objects.update_or_create(user=user, defaults={'sgi': sgi})
+            except SGI.DoesNotExist:
+                pass
+            try:
+                manager_obj, _ = SGIManager.objects.get_or_create(user=user, defaults={
+                    'professional_title': 'Manager SGI',
+                    'license_number': f"LIC-{user.id}",
+                    'years_of_experience': 0,
+                    'professional_email': user.email or '',
+                    'professional_phone': user.phone or '',
+                })
+                SGIManagerAssignment.objects.update_or_create(
+                    sgi=sgi, manager=manager_obj,
+                    defaults={'role': 'PRIMARY', 'permissions': ['ADMIN'], 'is_active': True}
+                )
+            except Exception:
+                pass
         message = f'Compte activé. Raison: {reason}' if reason else 'Compte activé'
         
     elif action == 'deactivate':
@@ -465,6 +490,47 @@ def admin_sgi_action(request, sgi_id):
             'updated_at': sgi.updated_at
         }
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_create_sgi(request):
+    """
+    Créer une nouvelle SGI (basique) depuis l'admin
+    POST /api/admin/sgis/create/
+    Accepte: name (obligatoire), description, email, phone, address, website, is_active
+    """
+    data = request.data
+    name = data.get('name')
+    if not name:
+        return Response({'error': 'Le nom de la SGI est obligatoire'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Créer la SGI de base
+        sgi = SGI.objects.create(
+            name=name,
+            description=data.get('description', ''),
+            email=data.get('email', ''),
+            phone=data.get('phone', ''),
+            address=data.get('address', ''),
+            website=data.get('website', ''),
+            is_active=bool(data.get('is_active', True))
+        )
+
+        return Response({
+            'id': sgi.id,
+            'name': sgi.name,
+            'description': sgi.description,
+            'email': sgi.email,
+            'phone': sgi.phone,
+            'address': sgi.address,
+            'website': sgi.website,
+            'is_active': sgi.is_active,
+            'created_at': sgi.created_at,
+            'updated_at': sgi.updated_at,
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': f'Erreur lors de la création de la SGI: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ===== GESTION DU CONTENU E-LEARNING =====
@@ -786,6 +852,32 @@ def admin_create_user(request):
             is_active=data.get('is_active', True),
             email_verified=data.get('email_verified', False)
         )
+        
+        # Lier à une SGI si fourni et rôle SGI_MANAGER
+        sgi_id = data.get('sgi_id')
+        if sgi_id and data.get('role') == 'SGI_MANAGER':
+            try:
+                sgi = SGI.objects.get(id=sgi_id)
+                # 1) Essayer via SGIManagerProfile (lien direct user<->sgi)
+                SGIManagerProfile.objects.update_or_create(user=user, defaults={'sgi': sgi})
+            except SGI.DoesNotExist:
+                pass
+            try:
+                # 2) Aussi maintenir l'autre modèle (SGIManager + Assignment) si utilisé
+                manager_obj, _ = SGIManager.objects.get_or_create(user=user, defaults={
+                    'professional_title': 'Manager SGI',
+                    'license_number': f"LIC-{user.id}",
+                    'years_of_experience': 0,
+                    'professional_email': user.email or '',
+                    'professional_phone': user.phone or '',
+                })
+                SGIManagerAssignment.objects.update_or_create(
+                    sgi=sgi, manager=manager_obj,
+                    defaults={'role': 'PRIMARY', 'permissions': ['ADMIN'], 'is_active': True}
+                )
+            except Exception:
+                # Pas bloquant si ce modèle alternatif n'est pas en usage
+                pass
         
         return Response({
             'message': 'Utilisateur créé avec succès',
