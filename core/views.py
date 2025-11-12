@@ -346,52 +346,79 @@ class SGIManagerTermsView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        # Le manager est lié à une SGI via SGIManagerProfile
-        from .models_sgi_manager import SGIManagerProfile
+    def _resolve_manager_sgi(self, user):
+        """Retourne l'objet SGI associé au manager connecté.
+        Supporte à la fois SGIManagerProfile (models_sgi_manager) et SGIManager (models_sgi).
+        """
+        # 1) Essayer le profil détaillé
         try:
-            profile = SGIManagerProfile.objects.get(user=request.user)
-        except SGIManagerProfile.DoesNotExist:
-            return Response({'error': 'Profil manager SGI introuvable'}, status=status.HTTP_404_NOT_FOUND)
+            from .models_sgi_manager import SGIManagerProfile  # type: ignore
+            profile = SGIManagerProfile.objects.get(user=user)
+            return profile.sgi
+        except Exception:
+            pass
 
-        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=profile.sgi)
+        # 2) Essayer le modèle SGIManager (ancien/nouvel autre module)
+        try:
+            from .models_sgi import SGIManager, SGIManagerAssignment  # type: ignore
+            manager = SGIManager.objects.get(user=user)
+            # Chercher une assignation PRIMARY en priorité
+            primary = (
+                SGIManagerAssignment.objects
+                .filter(manager=manager, role='PRIMARY', is_active=True)
+                .select_related('sgi')
+                .first()
+            )
+            if primary:
+                return primary.sgi
+            # Sinon, si une seule SGI est gérée, la prendre
+            qs = manager.managed_sgis.all()
+            if qs.count() == 1:
+                return qs.first()
+            # Sinon, aucune SGI déterminable
+            return None
+        except Exception:
+            return None
+
+    def get(self, request):
+        sgi_obj = self._resolve_manager_sgi(request.user)
+        if not sgi_obj:
+            return Response({'error': 'Profil manager SGI introuvable ou aucune SGI associée'}, status=status.HTTP_404_NOT_FOUND)
+
+        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=sgi_obj)
         return Response(SGIAccountTermsSerializer(terms).data)
 
     def put(self, request):
-        from .models_sgi_manager import SGIManagerProfile
-        try:
-            profile = SGIManagerProfile.objects.get(user=request.user)
-        except SGIManagerProfile.DoesNotExist:
-            return Response({'error': 'Profil manager SGI introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        sgi_obj = self._resolve_manager_sgi(request.user)
+        if not sgi_obj:
+            return Response({'error': 'Profil manager SGI introuvable ou aucune SGI associée'}, status=status.HTTP_404_NOT_FOUND)
 
-        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=profile.sgi)
+        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=sgi_obj)
         # Support update SGI name alongside terms
         sgi_name = request.data.get('sgi_name')
         if sgi_name:
-            profile.sgi.name = sgi_name
-            profile.sgi.save(update_fields=['name'])
+            sgi_obj.name = sgi_name
+            sgi_obj.save(update_fields=['name'])
         serializer = SGIAccountTermsSerializer(instance=terms, data=request.data, partial=False)
         if serializer.is_valid():
-            serializer.save(sgi=profile.sgi)
+            serializer.save(sgi=sgi_obj)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
-        from .models_sgi_manager import SGIManagerProfile
-        try:
-            profile = SGIManagerProfile.objects.get(user=request.user)
-        except SGIManagerProfile.DoesNotExist:
-            return Response({'error': 'Profil manager SGI introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        sgi_obj = self._resolve_manager_sgi(request.user)
+        if not sgi_obj:
+            return Response({'error': 'Profil manager SGI introuvable ou aucune SGI associée'}, status=status.HTTP_404_NOT_FOUND)
 
-        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=profile.sgi)
+        terms, _ = SGIAccountTerms.objects.get_or_create(sgi=sgi_obj)
         # Support update SGI name alongside terms
         sgi_name = request.data.get('sgi_name')
         if sgi_name:
-            profile.sgi.name = sgi_name
-            profile.sgi.save(update_fields=['name'])
+            sgi_obj.name = sgi_name
+            sgi_obj.save(update_fields=['name'])
         serializer = SGIAccountTermsSerializer(instance=terms, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(sgi=profile.sgi)
+            serializer.save(sgi=sgi_obj)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
