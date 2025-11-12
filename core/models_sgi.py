@@ -33,9 +33,9 @@ class SGIManager(models.Model):
     
     # Relation avec l'utilisateur
     user = models.OneToOneField(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='sgi_manager_profile'
+        User,
+        on_delete=models.CASCADE,
+        related_name='sgi_manager'
     )
     
     # SGI gérées
