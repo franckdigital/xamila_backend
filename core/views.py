@@ -326,6 +326,111 @@ class SGIComparatorView(APIView):
         return Response({'results': data, 'total': len(data)})
 
 
+class ComparatorMatchView(APIView):
+    """
+    Reçoit les entrées du stepper et renvoie des SGI qui matchent.
+    POST /api/sgis/comparator/match/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            payload = request.data or {}
+            wants_100_percent_digital_sgi = bool(payload.get('wants_100_percent_digital_sgi'))
+            available_minimum_amount = payload.get('available_minimum_amount')
+            try:
+                from decimal import Decimal
+                available_minimum_amount = Decimal(str(available_minimum_amount)) if available_minimum_amount not in (None, '') else None
+            except Exception:
+                available_minimum_amount = None
+
+            # Méthodes d'alimentation cochées
+            funding_flags = {
+                'VISA': bool(payload.get('funding_by_visa')),
+                'MOBILE_MONEY': bool(payload.get('funding_by_mobile_money')),
+                'BANK_TRANSFER': bool(payload.get('funding_by_bank_transfer')),
+            }
+            # Autres méthodes informatives (intermédiaire/WU...) non filtrantes pour le moment
+
+            # Base SGI actives
+            sgi_qs = SGI.objects.filter(is_active=True)
+            terms_qs = SGIAccountTerms.objects.select_related('sgi').filter(sgi__in=sgi_qs)
+
+            # Filtre digital si demandé
+            if wants_100_percent_digital_sgi:
+                terms_qs = terms_qs.filter(is_digital_opening=True)
+
+            # Filtre sur montant dispo vs min_investment_amount (SGI)
+            if available_minimum_amount is not None:
+                sgi_ids_amount = sgi_qs.filter(min_investment_amount__lte=available_minimum_amount).values_list('id', flat=True)
+                terms_qs = terms_qs.filter(sgi_id__in=list(sgi_ids_amount))
+
+            # Filtre sur méthodes de dépôt: doit contenir au moins une méthode cochée
+            wanted_methods = [name for name, v in funding_flags.items() if v]
+            if wanted_methods:
+                # JSONField contains-any workaround: filtrer en Python après fetch limité
+                candidates = list(terms_qs)
+                filtered = []
+                for t in candidates:
+                    dm = t.deposit_methods or []
+                    if any(m in dm for m in wanted_methods):
+                        filtered.append(t)
+                terms_qs = filtered
+            else:
+                terms_qs = list(terms_qs)
+
+            # Aucune correspondance: fallback à toutes les SGI actives
+            fallback = False
+            if not terms_qs:
+                fallback = True
+                terms_qs = list(SGIAccountTerms.objects.select_related('sgi').filter(sgi__is_active=True))
+
+            # Tri: qualité vs frais
+            prefer_quality = bool(payload.get('prefer_service_quality_over_fees', True))
+            if prefer_quality:
+                # Tri par vérification SGI puis performance historique desc puis frais de gestion asc
+                def sort_key(t):
+                    s = t.sgi
+                    return (
+                        0 if s.is_verified else 1,
+                        -(s.historical_performance or 0),
+                        (s.management_fees or 0)
+                    )
+                terms_qs.sort(key=sort_key)
+            else:
+                # Frais bas: gestion asc, frais ouverture asc, frais de garde asc
+                def coalesce(x):
+                    return x if x is not None else 0
+                def sort_key(t):
+                    s = t.sgi
+                    return (
+                        coalesce(s.management_fees),
+                        coalesce(t.opening_fees_amount),
+                        coalesce(t.custody_fees)
+                    )
+                terms_qs.sort(key=sort_key)
+
+            # Construire la réponse
+            results = []
+            for t in terms_qs:
+                s = t.sgi
+                results.append({
+                    'sgi': SGIListSerializer(s).data,
+                    'terms': SGIAccountTermsSerializer(t).data,
+                    'avg_rating': float(SGIRating.objects.filter(sgi=s).aggregate(Avg('score'))['score__avg'] or 0),
+                    'ratings_count': SGIRating.objects.filter(sgi=s).count(),
+                })
+
+            return Response({
+                'results': results,
+                'total': len(results),
+                'fallback': fallback
+            })
+        except Exception as e:
+            logger.error(f"Erreur comparator match: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class SGICountriesView(APIView):
     """
     Retourne la liste des pays disponibles depuis les termes SGI saisis par les managers

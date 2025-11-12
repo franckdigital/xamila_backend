@@ -64,6 +64,7 @@ urlpatterns = [
     path('sgis/', views.SGIListView.as_view(), name='sgi-list'),
     path('sgis/<uuid:pk>/', views.SGIDetailView.as_view(), name='sgi-detail'),
     path('sgis/comparator/', views.SGIComparatorView.as_view(), name='sgi-comparator'),
+    path('sgis/comparator/match/', views.ComparatorMatchView.as_view(), name='sgi-comparator-match'),
     path('sgis/countries/', views.SGICountriesView.as_view(), name='sgi_countries'),
     path('sgis/manager/terms/', views.SGIManagerTermsView.as_view(), name='sgi_manager_terms'),
     
