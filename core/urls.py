@@ -10,6 +10,7 @@ from . import views_learning
 from . import views_savings_goal
 from . import views_notifications
 from . import views, views_bilans, views_permissions, views_dashboard, views_blog, views_cohorte, views_ma_caisse
+from . import views_manager_dashboard as views_mgr
 from .views_resources import get_resource_content
 from .views_cohort_access import check_cohort_access, join_cohort_with_code, get_user_cohorts
 from .views_cohorte import verifier_code_cohorte, mes_cohortes, activer_acces_challenge, creer_cohorte
@@ -105,8 +106,8 @@ urlpatterns = [
     path('account-opening/contract/pdf/', views.ContractPDFGenerateView.as_view(), name='contract-pdf-generate'),
 
     # === ENDPOINTS MANAGER DASHBOARD ===
-    path('manager/clients/', views.ManagerClientsView.as_view(), name='manager-clients'),
-    path('manager/contracts/', views.ManagerContractsView.as_view(), name='manager-contracts'),
+    path('manager/clients/', views_mgr.ManagerClientsView.as_view(), name='manager-clients'),
+    path('manager/contracts/', views_mgr.ManagerContractsView.as_view(), name='manager-contracts'),
     
     # === ENDPOINTS DASHBOARD ===
     # Dashboard URLs
