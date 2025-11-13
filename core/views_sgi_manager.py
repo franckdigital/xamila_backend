@@ -409,6 +409,36 @@ class MySGIView(APIView):
             sgi = profile.sgi
             if not sgi:
                 return Response({"detail": "Aucune SGI liée au manager."}, status=status.HTTP_404_NOT_FOUND)
+            # Terms existants (si disponibles)
+            terms_data = None
+            try:
+                terms = SGIAccountTerms.objects.get(sgi=sgi)
+                terms_data = {
+                    'country': terms.country,
+                    'headquarters_address': terms.headquarters_address,
+                    'director_name': terms.director_name,
+                    'profile': terms.profile,
+                    'is_digital_opening': terms.is_digital_opening,
+                    'has_minimum_amount': terms.has_minimum_amount,
+                    'minimum_amount_value': str(terms.minimum_amount_value) if terms.minimum_amount_value is not None else None,
+                    'has_opening_fees': terms.has_opening_fees,
+                    'opening_fees_amount': str(terms.opening_fees_amount) if terms.opening_fees_amount is not None else None,
+                    'deposit_methods': terms.deposit_methods or [],
+                    'is_bank_subsidiary': terms.is_bank_subsidiary,
+                    'parent_bank_name': terms.parent_bank_name,
+                    'custody_fees': str(terms.custody_fees) if terms.custody_fees is not None else None,
+                    'account_maintenance_fees': str(terms.account_maintenance_fees) if terms.account_maintenance_fees is not None else None,
+                    'brokerage_fees_transactions_ordinary': str(terms.brokerage_fees_transactions_ordinary) if terms.brokerage_fees_transactions_ordinary is not None else None,
+                    'brokerage_fees_files': str(terms.brokerage_fees_files) if terms.brokerage_fees_files is not None else None,
+                    'brokerage_fees_transactions': str(terms.brokerage_fees_transactions) if terms.brokerage_fees_transactions is not None else None,
+                    'transfer_account_fees': str(terms.transfer_account_fees) if terms.transfer_account_fees is not None else None,
+                    'transfer_securities_fees': str(terms.transfer_securities_fees) if terms.transfer_securities_fees is not None else None,
+                    'pledge_fees': str(terms.pledge_fees) if terms.pledge_fees is not None else None,
+                    'redemption_methods': terms.redemption_methods or [],
+                    'preferred_customer_banks': terms.preferred_customer_banks or [],
+                }
+            except SGIAccountTerms.DoesNotExist:
+                terms_data = None
             data = {
                 'id': sgi.id,
                 'name': sgi.name,
@@ -430,6 +460,7 @@ class MySGIView(APIView):
                 'is_verified': sgi.is_verified,
                 'created_at': sgi.created_at,
                 'updated_at': sgi.updated_at,
+                'terms': terms_data,
             }
             return Response(data)
         except SGIManagerProfile.DoesNotExist:
