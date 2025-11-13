@@ -29,7 +29,6 @@ from .serializers import (
     ManagerContractSerializer, ManagerClientListItemSerializer
 )
 from .services import SGIMatchingService, EmailNotificationService
-from .services_pdf import ContractPDFService
 
 logger = logging.getLogger(__name__)
 
