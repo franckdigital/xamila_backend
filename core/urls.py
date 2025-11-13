@@ -103,6 +103,10 @@ urlpatterns = [
     path('account-opening/submit/', views.ContractSubmitOneClickView.as_view(), name='contract-submit-oneclick'),
     path('account-opening/authorize/', views.XamilaAuthorizationToggleView.as_view(), name='xamila-authorization-toggle'),
     path('account-opening/contract/pdf/', views.ContractPDFGenerateView.as_view(), name='contract-pdf-generate'),
+
+    # === ENDPOINTS MANAGER DASHBOARD ===
+    path('manager/clients/', views.ManagerClientsView.as_view(), name='manager-clients'),
+    path('manager/contracts/', views.ManagerContractsView.as_view(), name='manager-contracts'),
     
     # === ENDPOINTS DASHBOARD ===
     # Dashboard URLs

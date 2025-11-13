@@ -141,6 +141,53 @@ class AccountOpeningRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'customer', 'sgi', 'status', 'created_at', 'updated_at']
 
 
+class ManagerContractSerializer(serializers.ModelSerializer):
+    """Manager-facing contract serializer with KYC URLs and PDF link"""
+    sgi = SGIListSerializer(read_only=True)
+    photo_url = serializers.SerializerMethodField()
+    id_card_scan_url = serializers.SerializerMethodField()
+    pdf_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AccountOpeningRequest
+        fields = [
+            'id', 'created_at', 'updated_at', 'status',
+            'sgi', 'full_name', 'email', 'phone',
+            'country_of_residence', 'nationality', 'available_minimum_amount',
+            'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria',
+            'sources_of_income', 'investor_profile', 'customer_banks_current_account',
+            'photo_url', 'id_card_scan_url', 'pdf_url'
+        ]
+        read_only_fields = fields
+
+    def get_photo_url(self, obj):
+        try:
+            return obj.photo.url if obj.photo else None
+        except Exception:
+            return None
+
+    def get_id_card_scan_url(self, obj):
+        try:
+            return obj.id_card_scan.url if obj.id_card_scan else None
+        except Exception:
+            return None
+
+    def get_pdf_url(self, obj):
+        request = self.context.get('request')
+        base = request.build_absolute_uri('/')[:-1] if request else ''
+        return f"{base}/api/account-opening/contract/pdf/?account_opening_request_id={obj.id}"
+
+
+class ManagerClientListItemSerializer(serializers.Serializer):
+    """Aggregated view of clients for a manager"""
+    customer_id = serializers.UUIDField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    phone = serializers.CharField()
+    requests_count = serializers.IntegerField()
+    last_request_at = serializers.DateTimeField()
+
+
 class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
     """Serializer création de demande d'ouverture de compte (SGI optionnelle)"""
     sgi_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)

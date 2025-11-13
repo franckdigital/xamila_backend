@@ -16,6 +16,7 @@ from .models import (
     ClientSGIInteraction, EmailNotification, AdminDashboardEntry
 )
 from .models_sgi import SGIAccountTerms, SGIRating, AccountOpeningRequest
+from .services_pdf import ContractPDFService, WEASYPRINT_AVAILABLE
 from .serializers import (
     SGISerializer, SGIListSerializer, ClientInvestmentProfileSerializer,
     ClientInvestmentProfileCreateSerializer, SGIMatchingRequestSerializer,
@@ -24,7 +25,8 @@ from .serializers import (
     AdminDashboardEntrySerializer, MatchingCriteriaSerializer,
     SGISelectionSerializer, SGIStatisticsSerializer, ClientStatisticsSerializer,
     SGIAccountTermsSerializer, SGIRatingSerializer, SGIRatingCreateSerializer,
-    AccountOpeningRequestSerializer, AccountOpeningRequestCreateSerializer
+    AccountOpeningRequestSerializer, AccountOpeningRequestCreateSerializer,
+    ManagerContractSerializer, ManagerClientListItemSerializer
 )
 from .services import SGIMatchingService, EmailNotificationService
 from .services_pdf import ContractPDFService
@@ -625,6 +627,18 @@ class AccountOpeningRequestCreateView(APIView):
                         msg_client.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
             except Exception:
                 pass
+            # Attach PDF if WeasyPrint is available
+            try:
+                if WEASYPRINT_AVAILABLE:
+                    pdf_service = ContractPDFService()
+                    ctx = pdf_service.build_context(req_obj)
+                    html = pdf_service.render_html(ctx)
+                    # Use service's generate to produce response and read its content
+                    pdf_resp = pdf_service.generate_pdf_response(html, filename=f"contrat_{req_obj.id}.pdf")
+                    if pdf_resp.status_code == 200 and pdf_resp.content:
+                        msg_client.attach(filename=f"contrat_{req_obj.id}.pdf", content=pdf_resp.content, mimetype='application/pdf')
+            except Exception:
+                pass
             msg_client.send(fail_silently=True)
 
             # Notification SGI (si email manager connu)
@@ -666,6 +680,17 @@ class AccountOpeningRequestCreateView(APIView):
                         if req_obj.id_card_scan and req_obj.id_card_scan.name:
                             with req_obj.id_card_scan.open('rb') as f:
                                 msg_sgi.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
+                    except Exception:
+                        pass
+                    # Attach PDF to SGI as well if available
+                    try:
+                        if WEASYPRINT_AVAILABLE:
+                            pdf_service = ContractPDFService()
+                            ctx = pdf_service.build_context(req_obj)
+                            html = pdf_service.render_html(ctx)
+                            pdf_resp = pdf_service.generate_pdf_response(html, filename=f"contrat_{req_obj.id}.pdf")
+                            if pdf_resp.status_code == 200 and pdf_resp.content:
+                                msg_sgi.attach(filename=f"contrat_{req_obj.id}.pdf", content=pdf_resp.content, mimetype='application/pdf')
                     except Exception:
                         pass
                     msg_sgi.send(fail_silently=True)
