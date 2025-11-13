@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.db.models import Q, Count, Avg, Sum
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
@@ -557,46 +557,176 @@ class AccountOpeningRequestCreateView(APIView):
         try:
             req_obj = serializer.save()
 
-            # Emails
+            # Emails enrichis (HTML + pièces jointes si disponibles)
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com')
             xamila_email = getattr(settings, 'XAMILA_CONTACT_EMAIL', 'contact@xamila.com')
 
-            # Client confirmation
-            send_mail(
-                subject='Xamila - Confirmation de votre demande d\'ouverture de compte titre',
-                message=f"Bonjour {req_obj.full_name},\n\nVotre demande a été reçue. Nous vous recontacterons sous 48h.",
-                from_email=from_email,
-                recipient_list=[req_obj.email],
-                fail_silently=True,
+            sgi_name = getattr(req_obj.sgi, 'name', None) if req_obj.sgi else None
+            funding_methods = []
+            if req_obj.funding_by_visa: funding_methods.append('Carte Visa')
+            if req_obj.funding_by_mobile_money: funding_methods.append('Mobile Money')
+            if req_obj.funding_by_bank_transfer: funding_methods.append('Virement Bancaire')
+            if req_obj.funding_by_intermediary: funding_methods.append('Intermédiaire/Mandataire')
+            if req_obj.funding_by_wu_mg_ria: funding_methods.append('WU/MoneyGram/Ria')
+            banks = ', '.join(req_obj.customer_banks_current_account or [])
+            prefs = f"Digitale: {'Oui' if req_obj.wants_digital_opening else 'Non'} | En personne: {'Oui' if req_obj.wants_in_person_opening else 'Non'}"
+
+            html_body = f"""
+                <h2>Confirmation de votre demande d'ouverture de compte titre</h2>
+                <p>Bonjour {req_obj.full_name},</p>
+                <p>Nous avons bien reçu votre demande. Notre équipe vous recontactera sous 48h.</p>
+                <h3>Récapitulatif</h3>
+                <ul>
+                  <li><strong>SGI choisie:</strong> {sgi_name or 'Non spécifiée'}</li>
+                  <li><strong>Nom complet:</strong> {req_obj.full_name}</li>
+                  <li><strong>Email:</strong> {req_obj.email}</li>
+                  <li><strong>Téléphone:</strong> {req_obj.phone}</li>
+                  <li><strong>Pays de résidence:</strong> {req_obj.country_of_residence}</li>
+                  <li><strong>Nationalité:</strong> {req_obj.nationality}</li>
+                  <li><strong>Montant disponible:</strong> {req_obj.available_minimum_amount or 'N/A'}</li>
+                  <li><strong>Méthodes d'alimentation:</strong> {', '.join(funding_methods) or 'N/A'}</li>
+                  <li><strong>Banques actuelles:</strong> {banks or 'N/A'}</li>
+                  <li><strong>Préférences:</strong> {prefs}</li>
+                </ul>
+                <p>Merci de votre confiance,</p>
+                <p>L'équipe Xamila</p>
+            """
+            text_body = (
+                f"Bonjour {req_obj.full_name},\n\n"
+                "Nous avons bien reçu votre demande. Notre équipe vous recontactera sous 48h.\n\n"
+                f"SGI: {sgi_name or 'Non spécifiée'}\n"
+                f"Nom: {req_obj.full_name}\n"
+                f"Email: {req_obj.email}\n"
+                f"Téléphone: {req_obj.phone}\n"
+                f"Pays de résidence: {req_obj.country_of_residence}\n"
+                f"Nationalité: {req_obj.nationality}\n"
+                f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
+                f"Méthodes d'alimentation: {', '.join(funding_methods) or 'N/A'}\n"
+                f"Banques actuelles: {banks or 'N/A'}\n"
+                f"Préférences: {prefs}\n\n"
+                "Merci de votre confiance,\nL'équipe Xamila"
             )
 
-            # Notification SGI si choisie
+            # Email au client (HTML + texte)
+            msg_client = EmailMultiAlternatives(
+                subject="Xamila - Confirmation de votre demande d'ouverture de compte titre",
+                body=text_body,
+                from_email=from_email,
+                to=[req_obj.email],
+            )
+            msg_client.attach_alternative(html_body, "text/html")
+            # Joindre les fichiers uploadés si présents et accessibles
+            try:
+                if req_obj.photo and req_obj.photo.name:
+                    with req_obj.photo.open('rb') as f:
+                        msg_client.attach(filename='photo_identite' , content=f.read(), mimetype='application/octet-stream')
+                if req_obj.id_card_scan and req_obj.id_card_scan.name:
+                    with req_obj.id_card_scan.open('rb') as f:
+                        msg_client.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
+            except Exception:
+                pass
+            msg_client.send(fail_silently=True)
+
+            # Notification SGI (si email manager connu)
             if req_obj.sgi:
                 manager_email = getattr(req_obj.sgi, 'manager_email', None)
                 if manager_email:
-                    send_mail(
-                        subject='Xamila - Nouvelle demande de mise en relation client',
-                        message=(
-                            f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
-                            f"Pays résidence: {req_obj.country_of_residence} - Nationalité: {req_obj.nationality}\n"
-                            f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
-                            f"Préférences: digital={req_obj.wants_digital_opening}, en_personne={req_obj.wants_in_person_opening}\n"
-                        ),
-                        from_email=from_email,
-                        recipient_list=[manager_email],
-                        fail_silently=True,
+                    html_sgi = f"""
+                        <h2>Nouvelle demande de mise en relation client</h2>
+                        <p><strong>SGI:</strong> {sgi_name}</p>
+                        <ul>
+                          <li><strong>Client:</strong> {req_obj.full_name} - {req_obj.email} - {req_obj.phone}</li>
+                          <li><strong>Pays/Nationalité:</strong> {req_obj.country_of_residence} / {req_obj.nationality}</li>
+                          <li><strong>Montant disponible:</strong> {req_obj.available_minimum_amount or 'N/A'}</li>
+                          <li><strong>Méthodes d'alimentation:</strong> {', '.join(funding_methods) or 'N/A'}</li>
+                          <li><strong>Banques actuelles:</strong> {banks or 'N/A'}</li>
+                          <li><strong>Préférences:</strong> {prefs}</li>
+                        </ul>
+                    """
+                    text_sgi = (
+                        f"Nouvelle demande - SGI {sgi_name}\n"
+                        f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
+                        f"Pays/Nationalité: {req_obj.country_of_residence} / {req_obj.nationality}\n"
+                        f"Montant: {req_obj.available_minimum_amount or 'N/A'}\n"
+                        f"Moyens: {', '.join(funding_methods) or 'N/A'}\n"
+                        f"Banques: {banks or 'N/A'}\n"
+                        f"Préférences: {prefs}\n"
                     )
+                    msg_sgi = EmailMultiAlternatives(
+                        subject='Xamila - Nouvelle demande de mise en relation client',
+                        body=text_sgi,
+                        from_email=from_email,
+                        to=[manager_email],
+                    )
+                    msg_sgi.attach_alternative(html_sgi, "text/html")
+                    try:
+                        if req_obj.photo and req_obj.photo.name:
+                            with req_obj.photo.open('rb') as f:
+                                msg_sgi.attach(filename='photo_identite', content=f.read(), mimetype='application/octet-stream')
+                        if req_obj.id_card_scan and req_obj.id_card_scan.name:
+                            with req_obj.id_card_scan.open('rb') as f:
+                                msg_sgi.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
+                    except Exception:
+                        pass
+                    msg_sgi.send(fail_silently=True)
 
-            # Copie Xamila
-            send_mail(
+            # Copie Xamila (HTML court)
+            msg_xamila = EmailMultiAlternatives(
                 subject='Xamila - Nouvelle demande ouverture de compte',
-                message=f"Demande #{req_obj.id} par {req_obj.full_name} ({req_obj.email})",
+                body=f"Demande #{req_obj.id} par {req_obj.full_name} ({req_obj.email})",
                 from_email=from_email,
-                recipient_list=[xamila_email],
-                fail_silently=True,
+                to=[xamila_email],
             )
+            msg_xamila.attach_alternative(f"<p>Demande <strong>#{req_obj.id}</strong> par <strong>{req_obj.full_name}</strong> ({req_obj.email})</p>", "text/html")
+            msg_xamila.send(fail_silently=True)
 
             return Response(AccountOpeningRequestSerializer(req_obj).data, status=status.HTTP_201_CREATED)
+        except (OSError, PermissionError) as e:
+            # Retry creation without file fields to avoid 500 on storage permission issues
+            data_wo_files = request.data.copy()
+            data_wo_files.pop('photo', None)
+            data_wo_files.pop('id_card_scan', None)
+            serializer2 = AccountOpeningRequestCreateSerializer(data=data_wo_files, context={'request': request})
+            if not serializer2.is_valid():
+                return Response(serializer2.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                req_obj = serializer2.save()
+                # proceed to emails as usual
+                from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com')
+                xamila_email = getattr(settings, 'XAMILA_CONTACT_EMAIL', 'contact@xamila.com')
+                send_mail(
+                    subject='Xamila - Confirmation de votre demande d\'ouverture de compte titre',
+                    message=f"Bonjour {req_obj.full_name},\n\nVotre demande a été reçue. Nous vous recontacterons sous 48h.",
+                    from_email=from_email,
+                    recipient_list=[req_obj.email],
+                    fail_silently=True,
+                )
+                if req_obj.sgi:
+                    manager_email = getattr(req_obj.sgi, 'manager_email', None)
+                    if manager_email:
+                        send_mail(
+                            subject='Xamila - Nouvelle demande de mise en relation client',
+                            message=(
+                                f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
+                                f"Pays résidence: {req_obj.country_of_residence} - Nationalité: {req_obj.nationality}\n"
+                                f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
+                                f"Préférences: digital={req_obj.wants_digital_opening}, en_personne={req_obj.wants_in_person_opening}\n"
+                            ),
+                            from_email=from_email,
+                            recipient_list=[manager_email],
+                            fail_silently=True,
+                        )
+                send_mail(
+                    subject='Xamila - Nouvelle demande ouverture de compte',
+                    message=f"Demande #{req_obj.id} par {req_obj.full_name} ({req_obj.email})",
+                    from_email=from_email,
+                    recipient_list=[xamila_email],
+                    fail_silently=True,
+                )
+                return Response(AccountOpeningRequestSerializer(req_obj).data, status=status.HTTP_201_CREATED)
+            except Exception as e2:
+                logger.error(f"Erreur création AccountOpeningRequest (retry sans fichiers): {str(e2)}")
+                return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             logger.error(f"Erreur création AccountOpeningRequest: {str(e)}")
             return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

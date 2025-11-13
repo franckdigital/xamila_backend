@@ -199,8 +199,16 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
                 sgi = SGI.objects.get(id=sgi_id)
             except SGI.DoesNotExist:
                 raise serializers.ValidationError({'sgi_id': 'SGI introuvable'})
-        instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
-        return instance
+        # Handle potential storage permission issues when saving files
+        try:
+            instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
+            return instance
+        except (OSError, PermissionError):
+            # Retry without file fields
+            validated_data.pop('photo', None)
+            validated_data.pop('id_card_scan', None)
+            instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
+            return instance
 
 
 class SGIMatchingRequestSerializer(serializers.ModelSerializer):
@@ -261,6 +269,15 @@ class SGIRatingCreateSerializer(serializers.ModelSerializer):
             }
         )
         return rating
+
+
+class ContractPrefillResponseSerializer(serializers.Serializer):
+    """Serializer pour la réponse de préremplissage du contrat"""
+    suggested_investment_amount = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+    suggested_funding_source = serializers.CharField()
+    required_documents = serializers.ListField(child=serializers.CharField())
+    sgi = SGIListSerializer()
+    terms = SGIAccountTermsSerializer(allow_null=True)
 
 
 class ClientSGIInteractionSerializer(serializers.ModelSerializer):
