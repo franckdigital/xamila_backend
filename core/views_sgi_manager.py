@@ -35,7 +35,8 @@ from .serializers_sgi_manager import (
     SGIDashboardSerializer, ContractApprovalSerializer,
     SGIAnalyticsSerializer
 )
-from .permissions import IsSGIManager, IsSGIManagerOfSGI
+from .permissions import IsSGIManager, IsSGIManagerOfSGI, IsSGIManagerOrAdmin
+from .models_sgi import SGIAccountTerms
 from .utils_sgi_manager import SGIAnalyticsService, SGIPerformanceService
 
 User = get_user_model()
@@ -393,6 +394,193 @@ class ContractApprovalView(APIView):
                 )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MySGIView(APIView):
+    """
+    Récupère la SGI liée au manager connecté
+    GET /api/sgis/manager/mine/
+    """
+    permission_classes = [IsAuthenticated, IsSGIManager]
+
+    def get(self, request):
+        try:
+            profile = request.user.sgi_manager_profile
+            sgi = profile.sgi
+            if not sgi:
+                return Response({"detail": "Aucune SGI liée au manager."}, status=status.HTTP_404_NOT_FOUND)
+            data = {
+                'id': sgi.id,
+                'name': sgi.name,
+                'description': sgi.description,
+                'email': sgi.email,
+                'phone': sgi.phone,
+                'address': sgi.address,
+                'website': sgi.website,
+                'logo': sgi.logo.url if sgi.logo else None,
+                'manager_name': sgi.manager_name,
+                'manager_email': sgi.manager_email,
+                'manager_phone': sgi.manager_phone,
+                'min_investment_amount': str(sgi.min_investment_amount),
+                'max_investment_amount': str(sgi.max_investment_amount) if sgi.max_investment_amount is not None else None,
+                'historical_performance': str(sgi.historical_performance),
+                'management_fees': str(sgi.management_fees),
+                'entry_fees': str(sgi.entry_fees),
+                'is_active': sgi.is_active,
+                'is_verified': sgi.is_verified,
+                'created_at': sgi.created_at,
+                'updated_at': sgi.updated_at,
+            }
+            return Response(data)
+        except SGIManagerProfile.DoesNotExist:
+            return Response({"detail": "Profil SGI manager requis."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class SGICreateForManagerView(APIView):
+    """
+    Crée une SGI pour le manager connecté
+    POST /api/sgis/manager/create/
+    """
+    permission_classes = [IsAuthenticated, IsSGIManagerOrAdmin]
+
+    def post(self, request):
+        data = request.data
+        name = data.get('name')
+        if not name:
+            return Response({'error': 'Le nom de la SGI est obligatoire'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from decimal import Decimal
+            manager_name = data.get('manager_name') or (request.user.get_full_name() or 'Manager')
+            manager_email = data.get('manager_email') or (request.user.email or data.get('email') or 'contact@xamila.finance')
+            manager_phone = data.get('manager_phone') or (request.user.phone or '')
+
+            def parse_decimal(val, default):
+                try:
+                    return Decimal(str(val)) if val not in (None, '') else default
+                except Exception:
+                    return default
+
+            min_investment_amount = parse_decimal(data.get('min_investment_amount'), Decimal('1000.00'))
+            max_investment_amount = parse_decimal(data.get('max_investment_amount'), None)
+            historical_performance = parse_decimal(data.get('historical_performance'), Decimal('0.00'))
+            management_fees = parse_decimal(data.get('management_fees'), Decimal('2.00'))
+            entry_fees = parse_decimal(data.get('entry_fees'), Decimal('0.00'))
+            is_verified = bool(data.get('is_verified', False))
+
+            logo_file = request.FILES.get('logo')
+            sgi = SGI.objects.create(
+                name=name,
+                description=data.get('description', ''),
+                email=(data.get('email') or 'contact@xamila.finance'),
+                phone=data.get('phone', ''),
+                address=data.get('address', 'Adresse à renseigner'),
+                website=data.get('website', ''),
+                logo=logo_file if logo_file else None,
+                manager_name=manager_name,
+                manager_email=manager_email,
+                manager_phone=manager_phone,
+                min_investment_amount=min_investment_amount,
+                max_investment_amount=max_investment_amount,
+                historical_performance=historical_performance,
+                management_fees=management_fees,
+                entry_fees=entry_fees,
+                is_active=bool(data.get('is_active', True))
+            )
+            if is_verified and not sgi.is_verified:
+                sgi.is_verified = True
+                sgi.save(update_fields=['is_verified'])
+
+            import json
+            def parse_bool(val, default=False):
+                if isinstance(val, bool):
+                    return val
+                if val is None:
+                    return default
+                s = str(val).lower()
+                return s in ('1', 'true', 'yes', 'on')
+            def parse_json_list(val):
+                if val is None or val == "":
+                    return []
+                if isinstance(val, (list, tuple)):
+                    return list(val)
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return [x.strip() for x in str(val).split(',') if x.strip()]
+            def parse_decimal_nullable(val):
+                try:
+                    from decimal import Decimal as D
+                    return D(str(val)) if val not in (None, '') else None
+                except Exception:
+                    return None
+
+            terms_payload_present = any(k in request.data for k in [
+                'country','headquarters_address','director_name','profile','is_digital_opening',
+                'has_minimum_amount','minimum_amount_value','has_opening_fees','opening_fees_amount',
+                'deposit_methods','is_bank_subsidiary','parent_bank_name','custody_fees',
+                'account_maintenance_fees','brokerage_fees_transactions_ordinary','brokerage_fees_files',
+                'brokerage_fees_transactions','transfer_account_fees','transfer_securities_fees','pledge_fees',
+                'redemption_methods','preferred_customer_banks'
+            ])
+
+            if terms_payload_present:
+                SGIAccountTerms.objects.update_or_create(
+                    sgi=sgi,
+                    defaults={
+                        'country': data.get('country', '') or '',
+                        'headquarters_address': data.get('headquarters_address', '') or '',
+                        'director_name': data.get('director_name', '') or '',
+                        'profile': data.get('profile', '') or '',
+                        'is_digital_opening': parse_bool(data.get('is_digital_opening'), True),
+                        'has_minimum_amount': parse_bool(data.get('has_minimum_amount'), False),
+                        'minimum_amount_value': parse_decimal_nullable(data.get('minimum_amount_value')),
+                        'has_opening_fees': parse_bool(data.get('has_opening_fees'), False),
+                        'opening_fees_amount': parse_decimal_nullable(data.get('opening_fees_amount')),
+                        'deposit_methods': parse_json_list(data.get('deposit_methods')),
+                        'is_bank_subsidiary': parse_bool(data.get('is_bank_subsidiary'), False),
+                        'parent_bank_name': data.get('parent_bank_name') or None,
+                        'custody_fees': parse_decimal_nullable(data.get('custody_fees')),
+                        'account_maintenance_fees': parse_decimal_nullable(data.get('account_maintenance_fees')),
+                        'brokerage_fees_transactions_ordinary': parse_decimal_nullable(data.get('brokerage_fees_transactions_ordinary')),
+                        'brokerage_fees_files': parse_decimal_nullable(data.get('brokerage_fees_files')),
+                        'brokerage_fees_transactions': parse_decimal_nullable(data.get('brokerage_fees_transactions')),
+                        'transfer_account_fees': parse_decimal_nullable(data.get('transfer_account_fees')),
+                        'transfer_securities_fees': parse_decimal_nullable(data.get('transfer_securities_fees')),
+                        'pledge_fees': parse_decimal_nullable(data.get('pledge_fees')),
+                        'redemption_methods': parse_json_list(data.get('redemption_methods')),
+                        'preferred_customer_banks': parse_json_list(data.get('preferred_customer_banks')),
+                    }
+                )
+
+            # Lier la SGI au manager connecté via SGIManagerProfile
+            SGIManagerProfile.objects.update_or_create(user=request.user, defaults={'sgi': sgi})
+
+            return Response({
+                'id': sgi.id,
+                'name': sgi.name,
+                'description': sgi.description,
+                'email': sgi.email,
+                'phone': sgi.phone,
+                'address': sgi.address,
+                'website': sgi.website,
+                'logo': sgi.logo.url if sgi.logo else None,
+                'manager_name': sgi.manager_name,
+                'manager_email': sgi.manager_email,
+                'manager_phone': sgi.manager_phone,
+                'min_investment_amount': str(sgi.min_investment_amount),
+                'max_investment_amount': str(sgi.max_investment_amount) if sgi.max_investment_amount is not None else None,
+                'historical_performance': str(sgi.historical_performance),
+                'management_fees': str(sgi.management_fees),
+                'entry_fees': str(sgi.entry_fees),
+                'is_active': sgi.is_active,
+                'is_verified': sgi.is_verified,
+                'created_at': sgi.created_at,
+                'updated_at': sgi.updated_at,
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Erreur création SGI manager: {str(e)}")
+            return Response({'error': f'Erreur lors de la création de la SGI: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ClientManagementView(APIView):

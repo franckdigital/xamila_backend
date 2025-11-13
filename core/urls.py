@@ -67,6 +67,8 @@ urlpatterns = [
     path('sgis/comparator/match/', views.ComparatorMatchView.as_view(), name='sgi-comparator-match'),
     path('sgis/countries/', views.SGICountriesView.as_view(), name='sgi_countries'),
     path('sgis/manager/terms/', views.SGIManagerTermsView.as_view(), name='sgi_manager_terms'),
+    path('sgis/manager/create/', views_sgi_manager.SGICreateForManagerView.as_view(), name='sgi_manager_create'),
+    path('sgis/manager/mine/', views_sgi_manager.MySGIView.as_view(), name='sgi_manager_mine'),
     
     # === ENDPOINTS PROFIL CLIENT ===
     
