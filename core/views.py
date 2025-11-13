@@ -764,26 +764,54 @@ class ContractPDFGenerateView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
+    def _resolve_aor(self, request):
+        """Return (aor or None, error Response or None) based on authorization rules"""
         from .models_sgi import AccountOpeningRequest
-        aor_id = request.data.get('account_opening_request_id')
+        aor_id = request.data.get('account_opening_request_id') or request.query_params.get('account_opening_request_id')
         try:
             if aor_id:
-                aor = AccountOpeningRequest.objects.get(id=aor_id, customer=request.user)
-            else:
-                aor = AccountOpeningRequest.objects.filter(customer=request.user).order_by('-created_at').first()
+                aor = AccountOpeningRequest.objects.select_related('sgi').get(id=aor_id)
+                user = request.user
+                # Authorized if customer, staff, or manager of the AOR's SGI
+                is_customer = (aor.customer_id == getattr(user, 'id', None))
+                is_staff = bool(getattr(user, 'is_staff', False))
+                is_manager = bool(getattr(user, 'role', None) in ('MANAGER', 'SGI_MANAGER') and aor.sgi and aor.sgi.manager_email == user.email)
+                if not (is_customer or is_staff or is_manager):
+                    return None, Response({'detail': 'Accès non autorisé'}, status=status.HTTP_403_FORBIDDEN)
+                return aor, None
+            # No id provided: fallback to latest AOR of the current customer
+            aor = AccountOpeningRequest.objects.filter(customer=request.user).order_by('-created_at').first()
             if not aor:
-                return Response({'error': 'Aucune demande trouvée'}, status=status.HTTP_404_NOT_FOUND)
-
-            service = ContractPDFService()
-            ctx = service.build_context(aor)
-            html = service.render_html(ctx)
-            filename = f"contrat_{aor.id}.pdf"
-            return service.generate_pdf_response(html, filename)
+                return None, Response({'error': 'Aucune demande trouvée'}, status=status.HTTP_404_NOT_FOUND)
+            return aor, None
         except AccountOpeningRequest.DoesNotExist:
-            return Response({'error': 'Demande introuvable'}, status=status.HTTP_404_NOT_FOUND)
+            return None, Response({'error': 'Demande introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+    def _generate(self, aor):
+        service = ContractPDFService()
+        ctx = service.build_context(aor)
+        html = service.render_html(ctx)
+        filename = f"contrat_{aor.id}.pdf"
+        return service.generate_pdf_response(html, filename)
+
+    def post(self, request):
+        try:
+            aor, error = self._resolve_aor(request)
+            if error:
+                return error
+            return self._generate(aor)
         except Exception as e:
             logger.error(f"Erreur génération PDF: {str(e)}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        try:
+            aor, error = self._resolve_aor(request)
+            if error:
+                return error
+            return self._generate(aor)
+        except Exception as e:
+            logger.error(f"Erreur génération PDF (GET): {str(e)}")
             return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

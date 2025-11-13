@@ -162,13 +162,21 @@ class ManagerContractSerializer(serializers.ModelSerializer):
 
     def get_photo_url(self, obj):
         try:
-            return obj.photo.url if obj.photo else None
+            if not obj.photo:
+                return None
+            url = obj.photo.url
+            request = self.context.get('request')
+            return request.build_absolute_uri(url) if request else url
         except Exception:
             return None
 
     def get_id_card_scan_url(self, obj):
         try:
-            return obj.id_card_scan.url if obj.id_card_scan else None
+            if not obj.id_card_scan:
+                return None
+            url = obj.id_card_scan.url
+            request = self.context.get('request')
+            return request.build_absolute_uri(url) if request else url
         except Exception:
             return None
 
