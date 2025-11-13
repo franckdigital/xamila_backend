@@ -435,6 +435,170 @@ class MySGIView(APIView):
         except SGIManagerProfile.DoesNotExist:
             return Response({"detail": "Profil SGI manager requis."}, status=status.HTTP_404_NOT_FOUND)
 
+    def patch(self, request):
+        """Mise à jour partielle de la SGI du manager"""
+        try:
+            profile = request.user.sgi_manager_profile
+            sgi = profile.sgi
+        except SGIManagerProfile.DoesNotExist:
+            return Response({"detail": "Profil SGI manager requis."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        try:
+            from decimal import Decimal
+            def parse_decimal(val, default):
+                try:
+                    return Decimal(str(val)) if val not in (None, '') else default
+                except Exception:
+                    return default
+
+            # Champs de base (seulement si présents)
+            for field in ['name','description','email','phone','address','website','manager_name','manager_email','manager_phone']:
+                if field in data:
+                    setattr(sgi, field, data.get(field) or '')
+
+            if 'min_investment_amount' in data:
+                sgi.min_investment_amount = parse_decimal(data.get('min_investment_amount'), sgi.min_investment_amount)
+            if 'max_investment_amount' in data:
+                sgi.max_investment_amount = parse_decimal(data.get('max_investment_amount'), sgi.max_investment_amount)
+            if 'historical_performance' in data:
+                sgi.historical_performance = parse_decimal(data.get('historical_performance'), sgi.historical_performance)
+            if 'management_fees' in data:
+                sgi.management_fees = parse_decimal(data.get('management_fees'), sgi.management_fees)
+            if 'entry_fees' in data:
+                sgi.entry_fees = parse_decimal(data.get('entry_fees'), sgi.entry_fees)
+            if 'is_active' in data:
+                sgi.is_active = str(data.get('is_active')).lower() in ('1','true','yes','on') if not isinstance(data.get('is_active'), bool) else bool(data.get('is_active'))
+            if 'is_verified' in data:
+                sgi.is_verified = str(data.get('is_verified')).lower() in ('1','true','yes','on') if not isinstance(data.get('is_verified'), bool) else bool(data.get('is_verified'))
+
+            # Logo optionnel
+            if 'logo' in request.FILES:
+                sgi.logo = request.FILES['logo']
+
+            sgi.save()
+
+            # Mettre à jour Terms si fourni
+            import json
+            def parse_bool(val, default=False):
+                if isinstance(val, bool):
+                    return val
+                if val is None:
+                    return default
+                s = str(val).lower()
+                return s in ('1', 'true', 'yes', 'on')
+            def parse_json_list(val):
+                if val is None or val == "":
+                    return []
+                if isinstance(val, (list, tuple)):
+                    return list(val)
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return [x.strip() for x in str(val).split(',') if x.strip()]
+            def parse_decimal_nullable(val):
+                try:
+                    from decimal import Decimal as D
+                    return D(str(val)) if val not in (None, '') else None
+                except Exception:
+                    return None
+
+            terms_fields = [
+                'country','headquarters_address','director_name','profile','is_digital_opening',
+                'has_minimum_amount','minimum_amount_value','has_opening_fees','opening_fees_amount',
+                'deposit_methods','is_bank_subsidiary','parent_bank_name','custody_fees',
+                'account_maintenance_fees','brokerage_fees_transactions_ordinary','brokerage_fees_files',
+                'brokerage_fees_transactions','transfer_account_fees','transfer_securities_fees','pledge_fees',
+                'redemption_methods','preferred_customer_banks'
+            ]
+            if any(k in data for k in terms_fields):
+                defaults = {}
+                if 'country' in data:
+                    defaults['country'] = data.get('country') or ''
+                if 'headquarters_address' in data:
+                    defaults['headquarters_address'] = data.get('headquarters_address') or ''
+                if 'director_name' in data:
+                    defaults['director_name'] = data.get('director_name') or ''
+                if 'profile' in data:
+                    defaults['profile'] = data.get('profile') or ''
+                if 'is_digital_opening' in data:
+                    defaults['is_digital_opening'] = parse_bool(data.get('is_digital_opening'), True)
+                if 'has_minimum_amount' in data:
+                    defaults['has_minimum_amount'] = parse_bool(data.get('has_minimum_amount'), False)
+                if 'minimum_amount_value' in data:
+                    defaults['minimum_amount_value'] = parse_decimal_nullable(data.get('minimum_amount_value'))
+                if 'has_opening_fees' in data:
+                    defaults['has_opening_fees'] = parse_bool(data.get('has_opening_fees'), False)
+                if 'opening_fees_amount' in data:
+                    defaults['opening_fees_amount'] = parse_decimal_nullable(data.get('opening_fees_amount'))
+                if 'deposit_methods' in data:
+                    defaults['deposit_methods'] = parse_json_list(data.get('deposit_methods'))
+                if 'is_bank_subsidiary' in data:
+                    defaults['is_bank_subsidiary'] = parse_bool(data.get('is_bank_subsidiary'), False)
+                if 'parent_bank_name' in data:
+                    defaults['parent_bank_name'] = data.get('parent_bank_name') or None
+                if 'custody_fees' in data:
+                    defaults['custody_fees'] = parse_decimal_nullable(data.get('custody_fees'))
+                if 'account_maintenance_fees' in data:
+                    defaults['account_maintenance_fees'] = parse_decimal_nullable(data.get('account_maintenance_fees'))
+                if 'brokerage_fees_transactions_ordinary' in data:
+                    defaults['brokerage_fees_transactions_ordinary'] = parse_decimal_nullable(data.get('brokerage_fees_transactions_ordinary'))
+                if 'brokerage_fees_files' in data:
+                    defaults['brokerage_fees_files'] = parse_decimal_nullable(data.get('brokerage_fees_files'))
+                if 'brokerage_fees_transactions' in data:
+                    defaults['brokerage_fees_transactions'] = parse_decimal_nullable(data.get('brokerage_fees_transactions'))
+                if 'transfer_account_fees' in data:
+                    defaults['transfer_account_fees'] = parse_decimal_nullable(data.get('transfer_account_fees'))
+                if 'transfer_securities_fees' in data:
+                    defaults['transfer_securities_fees'] = parse_decimal_nullable(data.get('transfer_securities_fees'))
+                if 'pledge_fees' in data:
+                    defaults['pledge_fees'] = parse_decimal_nullable(data.get('pledge_fees'))
+                if 'redemption_methods' in data:
+                    defaults['redemption_methods'] = parse_json_list(data.get('redemption_methods'))
+                if 'preferred_customer_banks' in data:
+                    defaults['preferred_customer_banks'] = parse_json_list(data.get('preferred_customer_banks'))
+
+                SGIAccountTerms.objects.update_or_create(sgi=sgi, defaults=defaults)
+
+            # Réponse
+            response = {
+                'id': sgi.id,
+                'name': sgi.name,
+                'description': sgi.description,
+                'email': sgi.email,
+                'phone': sgi.phone,
+                'address': sgi.address,
+                'website': sgi.website,
+                'logo': sgi.logo.url if sgi.logo else None,
+                'manager_name': sgi.manager_name,
+                'manager_email': sgi.manager_email,
+                'manager_phone': sgi.manager_phone,
+                'min_investment_amount': str(sgi.min_investment_amount),
+                'max_investment_amount': str(sgi.max_investment_amount) if sgi.max_investment_amount is not None else None,
+                'historical_performance': str(sgi.historical_performance),
+                'management_fees': str(sgi.management_fees),
+                'entry_fees': str(sgi.entry_fees),
+                'is_active': sgi.is_active,
+                'is_verified': sgi.is_verified,
+                'created_at': sgi.created_at,
+                'updated_at': sgi.updated_at,
+            }
+            return Response(response)
+        except Exception as e:
+            logger.error(f"Erreur mise à jour SGI manager: {str(e)}")
+            return Response({'error': f'Erreur lors de la mise à jour de la SGI: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        """Supprime la SGI du manager (cascade supprime le profil)"""
+        try:
+            profile = request.user.sgi_manager_profile
+            sgi = profile.sgi
+        except SGIManagerProfile.DoesNotExist:
+            return Response({"detail": "Profil SGI manager requis."}, status=status.HTTP_404_NOT_FOUND)
+
+        sgi.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SGICreateForManagerView(APIView):
     """
