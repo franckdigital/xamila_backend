@@ -156,6 +156,33 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
             'holder_info', 'photo', 'id_card_scan', 'wants_xamila_plus', 'authorize_xamila_to_receive_account_info'
         ]
     def validate(self, attrs):
+        # Normaliser les champs susceptibles d'arriver en multipart texte
+        import json
+        # customer_banks_current_account -> liste
+        banks = attrs.get('customer_banks_current_account')
+        if isinstance(banks, str):
+            banks = banks.strip()
+            if banks.startswith('['):
+                try:
+                    banks = json.loads(banks)
+                except Exception:
+                    # fallback: split by comma
+                    banks = [s.strip() for s in banks.split(',') if s.strip()]
+            else:
+                banks = [s.strip() for s in banks.split(',') if s.strip()]
+            attrs['customer_banks_current_account'] = banks
+
+        # available_minimum_amount -> Decimal or None
+        from decimal import Decimal, InvalidOperation
+        amt = attrs.get('available_minimum_amount')
+        if isinstance(amt, str) and amt != '':
+            try:
+                attrs['available_minimum_amount'] = Decimal(amt)
+            except InvalidOperation:
+                raise serializers.ValidationError({'available_minimum_amount': 'Montant invalide'})
+        if amt in ('', None):
+            attrs['available_minimum_amount'] = None
+
         # exiger au moins une méthode d'alimentation
         if not any([
             attrs.get('funding_by_visa'), attrs.get('funding_by_mobile_money'),

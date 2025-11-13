@@ -572,18 +572,20 @@ class AccountOpeningRequestCreateView(APIView):
 
             # Notification SGI si choisie
             if req_obj.sgi:
-                send_mail(
-                    subject='Xamila - Nouvelle demande de mise en relation client',
-                    message=(
-                        f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
-                        f"Pays résidence: {req_obj.country_of_residence} - Nationalité: {req_obj.nationality}\n"
-                        f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
-                        f"Préférences: digital={req_obj.wants_digital_opening}, en_personne={req_obj.wants_in_person_opening}\n"
-                    ),
-                    from_email=from_email,
-                    recipient_list=[req_obj.sgi.manager_email],
-                    fail_silently=True,
-                )
+                manager_email = getattr(req_obj.sgi, 'manager_email', None)
+                if manager_email:
+                    send_mail(
+                        subject='Xamila - Nouvelle demande de mise en relation client',
+                        message=(
+                            f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
+                            f"Pays résidence: {req_obj.country_of_residence} - Nationalité: {req_obj.nationality}\n"
+                            f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
+                            f"Préférences: digital={req_obj.wants_digital_opening}, en_personne={req_obj.wants_in_person_opening}\n"
+                        ),
+                        from_email=from_email,
+                        recipient_list=[manager_email],
+                        fail_silently=True,
+                    )
 
             # Copie Xamila
             send_mail(
