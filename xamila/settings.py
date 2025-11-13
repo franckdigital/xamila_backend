@@ -169,6 +169,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Contract templates
+DEFAULT_CONTRACT_TEMPLATE_PDF = "/var/www/xamila/xamila_backend/contracts/GEK --Convention commerciale VF 2025.pdf"
+# Optional: per-SGI mapping (keys must exactly match SGI.name)
+CONTRACT_TEMPLATES_BY_SGI = {
+    "GEK": "/var/www/xamila/xamila_backend/contracts/GEK --Convention commerciale VF 2025.pdf",
+    # "Another SGI": "/var/www/.../another_template.pdf",
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
