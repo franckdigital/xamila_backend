@@ -28,7 +28,7 @@ class ManagerContractsView(generics.ListAPIView):
         qs = AccountOpeningRequest.objects.select_related('sgi').order_by('-created_at')
         if getattr(user, 'is_staff', False):
             return qs
-        return qs.filter(sgi__manager_email=user.email)
+        return qs.filter(sgi__isnull=False, sgi__manager_email=user.email)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
