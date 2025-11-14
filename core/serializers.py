@@ -145,6 +145,7 @@ class ManagerContractSerializer(serializers.ModelSerializer):
     """Manager-facing contract serializer with KYC URLs and PDF link"""
     sgi = SGIListSerializer(read_only=True)
     sgi_name = serializers.SerializerMethodField()
+    sgi_display = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     id_card_scan_url = serializers.SerializerMethodField()
     pdf_url = serializers.SerializerMethodField()
@@ -153,7 +154,7 @@ class ManagerContractSerializer(serializers.ModelSerializer):
         model = AccountOpeningRequest
         fields = [
             'id', 'created_at', 'updated_at', 'status',
-            'sgi', 'sgi_name', 'full_name', 'email', 'phone',
+            'sgi', 'sgi_name', 'sgi_display', 'full_name', 'email', 'phone',
             'country_of_residence', 'nationality', 'available_minimum_amount',
             'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria',
             'sources_of_income', 'investor_profile', 'customer_banks_current_account',
@@ -176,6 +177,18 @@ class ManagerContractSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(url) if request else url
         except Exception:
             return None
+
+    def get_sgi_display(self, obj):
+        # Prefer annotated sgi_name, then nested sgi.name, else None
+        try:
+            annotated = getattr(obj, 'sgi_name', None)
+        except Exception:
+            annotated = None
+        try:
+            nested = obj.sgi.name if obj.sgi else None
+        except Exception:
+            nested = None
+        return annotated or nested
 
     def get_id_card_scan_url(self, obj):
         try:
