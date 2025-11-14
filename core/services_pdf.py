@@ -196,56 +196,120 @@ class ContractPDFService:
         if not template_path:
             return None
         try:
-            # Read base template
             reader = PdfReader(template_path)
             writer = PdfWriter()
 
-            # Create an overlay for the first page with key info (coordinates need tuning per template)
-            overlay_io = BytesIO()
-            _w, _h = A4
-            c = canvas.Canvas(overlay_io, pagesize=A4)
-            c.setFont("Helvetica", 10)
-            # Example positions (Top-left origin from reportlab is bottom-left):
-            y = 270 * mm
-            x_left = 25 * mm
-            # SGI
-            c.drawString(x_left, y, f"SGI: {sgi.name if sgi else '—'}")
-            y -= 7 * mm
-            c.drawString(x_left, y, f"Adresse: {getattr(sgi, 'address', '') if sgi else ''}")
-            y -= 7 * mm
-            c.drawString(x_left, y, f"Manager: {getattr(sgi, 'manager_name', '') if sgi else ''} ({getattr(sgi, 'manager_email', '') if sgi else ''})")
-            # Client block
-            y -= 12 * mm
-            c.drawString(x_left, y, f"Client: {aor.full_name}")
-            y -= 7 * mm
-            c.drawString(x_left, y, f"Email: {aor.email}  Tel: {aor.phone}")
-            y -= 7 * mm
-            c.drawString(x_left, y, f"Pays/Nationalité: {aor.country_of_residence} / {aor.nationality}")
-            # Preferences
-            y -= 12 * mm
-            c.drawString(x_left, y, f"Montant dispo: {aor.available_minimum_amount or ''}")
-            y -= 7 * mm
-            methods = []
-            if aor.funding_by_visa: methods.append('VISA')
-            if aor.funding_by_mobile_money: methods.append('MOBILE MONEY')
-            if aor.funding_by_bank_transfer: methods.append('VIREMENT')
-            if aor.funding_by_intermediary: methods.append('INTERMÉDIAIRE')
-            if aor.funding_by_wu_mg_ria: methods.append('WU/MG/RIA')
-            c.drawString(x_left, y, f"Méthodes: {', '.join(methods) or '—'}")
-            c.showPage()
-            c.save()
-            overlay_io.seek(0)
+            def draw_checkbox(cvs, x, y, checked):
+                size = 4 * mm
+                cvs.rect(x, y, size, size, stroke=1, fill=0)
+                if checked:
+                    cvs.line(x, y, x + size, y + size)
+                    cvs.line(x, y + size, x + size, y)
 
-            # Merge overlay with first page of template; copy remaining pages as-is
-            overlay_page = PdfReader(overlay_io).pages[0]
+            overlays = []
+            pages_count = len(reader.pages)
+            for page_index in range(pages_count):
+                ov = BytesIO()
+                c = canvas.Canvas(ov, pagesize=A4)
+                c.setFont("Helvetica", 10)
+
+                if sgi and (sgi.name or '').strip().upper() in ('GEK', 'GEK CAPITAL', 'GEK CAPITAL SA'):
+                    # Page 1 (cover/summary) – keep for context; main dynamic pages are 22, 23, 26
+                    if page_index == 0:
+                        x = 25 * mm
+                        y = 250 * mm
+                        c.setFont("Helvetica-Bold", 11)
+                        c.drawString(x, y, f"{aor.full_name}")
+                        y -= 7 * mm
+                        c.setFont("Helvetica", 10)
+                        c.drawString(x, y, f"{aor.email} | {aor.phone}")
+                        y -= 7 * mm
+                        c.drawString(x, y, f"{aor.country_of_residence} / {aor.nationality}")
+                        y -= 10 * mm
+                        m = []
+                        if aor.funding_by_visa: m.append('VISA')
+                        if aor.funding_by_mobile_money: m.append('MOBILE MONEY')
+                        if aor.funding_by_bank_transfer: m.append('VIREMENT')
+                        if aor.funding_by_intermediary: m.append('INTERMEDIAIRE')
+                        if aor.funding_by_wu_mg_ria: m.append('WU/MG/RIA')
+                        c.drawString(x, y, f"Méthodes d'alimentation: {', '.join(m) or '—'}")
+                        # Compte individuel par défaut
+                        draw_checkbox(c, 17 * mm, 262 * mm, True)
+                        # Fait à / le
+                        c.drawString(35 * mm, 35 * mm, aor.country_of_residence or '')
+                        try:
+                            from django.utils import timezone
+                            c.drawString(120 * mm, 35 * mm, timezone.now().strftime('%d/%m/%Y'))
+                        except Exception:
+                            pass
+                    # Annexe 1 – formulaire (likely early page); we keep this minimal
+                    elif page_index == 1:
+                        x1 = 52 * mm
+                        y1 = 238 * mm
+                        parts = (aor.full_name or '').split()
+                        nom = parts[-1] if parts else ''
+                        prenoms = ' '.join(parts[:-1]) if len(parts) > 1 else ''
+                        c.drawString(x1, y1, nom)
+                        c.drawString(140 * mm, y1, prenoms)
+                        y2 = 230 * mm
+                        c.drawString(52 * mm, y2, aor.nationality or '')
+                        # Email / Téléphones
+                        c.drawString(30 * mm, 128 * mm, aor.phone or '')
+                        c.drawString(120 * mm, 128 * mm, '')
+                        c.drawString(30 * mm, 120 * mm, aor.email or '')
+
+                    # === GEK dynamic pages ===
+                    # Page 22 (0-based 21): 'Annexe 1' section with identity and contact
+                    elif page_index == 21:
+                        # Basic identity fields
+                        parts = (aor.full_name or '').split()
+                        nom = parts[-1] if parts else ''
+                        prenoms = ' '.join(parts[:-1]) if len(parts) > 1 else ''
+                        # Nom / Prénoms (top area)
+                        c.drawString(52 * mm, 238 * mm, nom)
+                        c.drawString(140 * mm, 238 * mm, prenoms)
+                        # Nationalité
+                        c.drawString(52 * mm, 230 * mm, aor.nationality or '')
+                        # Adresse fiscale (we only have country; placing country and phone/email lower)
+                        c.drawString(30 * mm, 176 * mm, aor.country_of_residence or '')
+                        # Coordonnées du titulaire
+                        c.drawString(30 * mm, 128 * mm, aor.phone or '')  # Tel Portable
+                        c.drawString(120 * mm, 128 * mm, '')               # Tel Domicile (unknown)
+                        c.drawString(30 * mm, 120 * mm, aor.email or '')   # Email
+
+                    # Page 23 (0-based 22): Restrictions éventuelles & coordonnées représentant, and consent email
+                    elif page_index == 22:
+                        # We don't know restrictions; leave unchecked. Fill coordinates of the titulaire again near the bottom if available
+                        # Email consent section – pre-check opting into electronic communication
+                        draw_checkbox(c, 26 * mm, 60 * mm, True)
+                        c.drawString(30 * mm, 56 * mm, aor.email or '')
+
+                    # Page 26 (0-based 25): "CARACTÉRISTIQUES DU COMPTE" and signature block
+                    elif page_index == 25:
+                        # Check "Compte individuel pleine propriété"
+                        draw_checkbox(c, 17 * mm, 262 * mm, True)
+                        # Nom et prénoms de la personne désignée pour faire fonctionner le compte – use AOR full name
+                        c.drawString(30 * mm, 205 * mm, aor.full_name or '')
+                        # Fait à / le
+                        c.drawString(35 * mm, 35 * mm, aor.country_of_residence or '')
+                        try:
+                            from django.utils import timezone
+                            c.drawString(120 * mm, 35 * mm, timezone.now().strftime('%d/%m/%Y'))
+                        except Exception:
+                            pass
+
+                c.showPage()
+                c.save()
+                ov.seek(0)
+                overlays.append(PdfReader(ov).pages[0])
+
             for i, page in enumerate(reader.pages):
                 page_out = page
-                if i == 0:
+                if i < len(overlays):
                     try:
-                        page_out.merge_page(overlay_page)
+                        page_out.merge_page(overlays[i])
                     except Exception:
-                        # Older PyPDF2 API
-                        page_out.mergePage(overlay_page)  # type: ignore
+                        page_out.mergePage(overlays[i])  # type: ignore
                 writer.add_page(page_out)
 
             out_io = BytesIO()
