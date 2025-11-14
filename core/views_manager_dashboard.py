@@ -25,7 +25,7 @@ class ManagerContractsView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        qs = AccountOpeningRequest.objects.select_related('sgi').order_by('-created_at')
+        qs = AccountOpeningRequest.objects.select_related('sgi').annotate(sgi_name=F('sgi__name')).order_by('-created_at')
         if getattr(user, 'is_staff', False):
             return qs
         return qs.filter(sgi__isnull=False, sgi__manager_email=user.email)
