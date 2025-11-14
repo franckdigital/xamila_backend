@@ -193,6 +193,7 @@ class ContractPDFService:
         sgi = context.get('sgi')
         aor: AccountOpeningRequest = context.get('aor')
         client = context.get('client')
+        annex = context.get('annex') or getattr(aor, 'annex_data', None) or {}
         template_path = self._maybe_get_template_path(sgi)
         if not template_path:
             return None
@@ -220,12 +221,14 @@ class ContractPDFService:
                         x = 25 * mm
                         y = 250 * mm
                         c.setFont("Helvetica-Bold", 11)
-                        c.drawString(x, y, f"{aor.full_name}")
+                        c.drawString(x, y, f"{getattr(aor, 'full_name', '')}")
                         y -= 7 * mm
                         c.setFont("Helvetica", 10)
-                        c.drawString(x, y, f"{aor.email} | {aor.phone}")
+                        email = (annex.get('page22', {}) or {}).get('email') or getattr(aor, 'email', '')
+                        phone = (annex.get('page22', {}) or {}).get('phone') or getattr(aor, 'phone', '')
+                        c.drawString(x, y, f"{email} | {phone}")
                         y -= 7 * mm
-                        c.drawString(x, y, f"{aor.country_of_residence} / {aor.nationality}")
+                        c.drawString(x, y, f"{getattr(aor, 'country_of_residence', '')} / {getattr(aor, 'nationality', '')}")
                         y -= 10 * mm
                         m = []
                         if aor.funding_by_visa: m.append('VISA')
@@ -247,55 +250,66 @@ class ContractPDFService:
                     elif page_index == 1:
                         x1 = 52 * mm
                         y1 = 238 * mm
-                        parts = (aor.full_name or '').split()
+                        # prefer annex overrides if present
+                        p22 = annex.get('page22', {}) if isinstance(annex, dict) else {}
+                        nom_override = p22.get('last_name')
+                        prenoms_override = p22.get('first_names')
+                        parts = (getattr(aor, 'full_name', '') or '').split()
                         nom = parts[-1] if parts else ''
                         prenoms = ' '.join(parts[:-1]) if len(parts) > 1 else ''
+                        if nom_override: nom = nom_override
+                        if prenoms_override: prenoms = prenoms_override
                         c.drawString(x1, y1, nom)
                         c.drawString(140 * mm, y1, prenoms)
                         y2 = 230 * mm
-                        c.drawString(52 * mm, y2, aor.nationality or '')
+                        c.drawString(52 * mm, y2, (p22.get('nationality') or getattr(aor, 'nationality', '')))
                         # Email / Téléphones
-                        c.drawString(30 * mm, 128 * mm, aor.phone or '')
+                        c.drawString(30 * mm, 128 * mm, (p22.get('phone') or getattr(aor, 'phone', '')))
                         c.drawString(120 * mm, 128 * mm, '')
-                        c.drawString(30 * mm, 120 * mm, aor.email or '')
+                        c.drawString(30 * mm, 120 * mm, (p22.get('email') or getattr(aor, 'email', '')))
 
                     # === GEK dynamic pages ===
                     # Page 22 (0-based 21): 'Annexe 1' section with identity and contact
                     elif page_index == 21:
                         # Basic identity fields
-                        parts = (aor.full_name or '').split()
+                        p22 = annex.get('page22', {}) if isinstance(annex, dict) else {}
+                        parts = (getattr(aor, 'full_name', '') or '').split()
                         nom = parts[-1] if parts else ''
                         prenoms = ' '.join(parts[:-1]) if len(parts) > 1 else ''
+                        nom = p22.get('last_name') or nom
+                        prenoms = p22.get('first_names') or prenoms
                         # Nom / Prénoms (top area)
                         c.drawString(52 * mm, 238 * mm, nom)
                         c.drawString(140 * mm, 238 * mm, prenoms)
                         # Nationalité
-                        c.drawString(52 * mm, 230 * mm, aor.nationality or '')
+                        c.drawString(52 * mm, 230 * mm, (p22.get('nationality') or getattr(aor, 'nationality', '')))
                         # Adresse fiscale (we only have country; placing country and phone/email lower)
-                        c.drawString(30 * mm, 176 * mm, aor.country_of_residence or '')
+                        c.drawString(30 * mm, 176 * mm, (p22.get('fiscal_country') or getattr(aor, 'country_of_residence', '')))
                         # Coordonnées du titulaire
-                        c.drawString(30 * mm, 128 * mm, aor.phone or '')  # Tel Portable
+                        c.drawString(30 * mm, 128 * mm, (p22.get('phone') or getattr(aor, 'phone', '')))  # Tel Portable
                         c.drawString(120 * mm, 128 * mm, '')               # Tel Domicile (unknown)
-                        c.drawString(30 * mm, 120 * mm, aor.email or '')   # Email
+                        c.drawString(30 * mm, 120 * mm, (p22.get('email') or getattr(aor, 'email', '')))   # Email
 
                     # Page 23 (0-based 22): Restrictions éventuelles & coordonnées représentant, and consent email
                     elif page_index == 22:
                         # We don't know restrictions; leave unchecked. Fill coordinates of the titulaire again near the bottom if available
                         # Email consent section – pre-check opting into electronic communication
-                        draw_checkbox(c, 26 * mm, 60 * mm, True)
-                        c.drawString(30 * mm, 56 * mm, aor.email or '')
+                        p23 = annex.get('page23', {}) if isinstance(annex, dict) else {}
+                        draw_checkbox(c, 26 * mm, 60 * mm, bool(p23.get('consent_email', True)))
+                        c.drawString(30 * mm, 56 * mm, (p23.get('email') or (annex.get('page22', {}) or {}).get('email') or getattr(aor, 'email', '')))
 
                     # Page 26 (0-based 25): "CARACTÉRISTIQUES DU COMPTE" and signature block
                     elif page_index == 25:
                         # Check "Compte individuel pleine propriété"
-                        draw_checkbox(c, 17 * mm, 262 * mm, True)
+                        p26 = annex.get('page26', {}) if isinstance(annex, dict) else {}
+                        draw_checkbox(c, 17 * mm, 262 * mm, bool(p26.get('account_individual', True)))
                         # Nom et prénoms de la personne désignée pour faire fonctionner le compte – use AOR full name
-                        c.drawString(30 * mm, 205 * mm, aor.full_name or '')
+                        c.drawString(30 * mm, 205 * mm, (p26.get('designated_operator_name') or getattr(aor, 'full_name', '')))
                         # Fait à / le
-                        c.drawString(35 * mm, 35 * mm, aor.country_of_residence or '')
+                        c.drawString(35 * mm, 35 * mm, (p26.get('place') or getattr(aor, 'country_of_residence', '')))
                         try:
                             from django.utils import timezone
-                            c.drawString(120 * mm, 35 * mm, timezone.now().strftime('%d/%m/%Y'))
+                            c.drawString(120 * mm, 35 * mm, (p26.get('date') or timezone.now().strftime('%d/%m/%Y')))
                         except Exception:
                             pass
 

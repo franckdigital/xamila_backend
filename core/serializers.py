@@ -125,6 +125,7 @@ class AccountOpeningRequestSerializer(serializers.ModelSerializer):
     """Serializer lecture des demandes d'ouverture de compte"""
     customer = UserSerializer(read_only=True)
     sgi = SGIListSerializer(read_only=True)
+    annex_data = serializers.JSONField(required=False)
     class Meta:
         model = AccountOpeningRequest
         fields = [
@@ -134,7 +135,7 @@ class AccountOpeningRequestSerializer(serializers.ModelSerializer):
             'wants_digital_opening', 'wants_in_person_opening', 'available_minimum_amount', 'wants_100_percent_digital_sgi',
             'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria', 'wants_xamila_as_intermediary',
             'prefer_service_quality_over_fees', 'sources_of_income', 'investor_profile',
-            'holder_info', 'photo', 'id_card_scan',
+            'holder_info', 'photo', 'id_card_scan', 'annex_data',
             'wants_xamila_plus', 'authorize_xamila_to_receive_account_info',
             'status', 'created_at', 'updated_at'
         ]
@@ -150,6 +151,7 @@ class ManagerContractSerializer(serializers.ModelSerializer):
     id_card_scan_url = serializers.SerializerMethodField()
     pdf_url = serializers.SerializerMethodField()
 
+    annex_data = serializers.JSONField(required=False)
     class Meta:
         model = AccountOpeningRequest
         fields = [
@@ -158,7 +160,7 @@ class ManagerContractSerializer(serializers.ModelSerializer):
             'country_of_residence', 'nationality', 'available_minimum_amount',
             'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria',
             'sources_of_income', 'investor_profile', 'customer_banks_current_account',
-            'photo_url', 'id_card_scan_url', 'pdf_url'
+            'annex_data', 'photo_url', 'id_card_scan_url', 'pdf_url'
         ]
         read_only_fields = fields
 
@@ -219,6 +221,7 @@ class ManagerClientListItemSerializer(serializers.Serializer):
 class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
     """Serializer création de demande d'ouverture de compte (SGI optionnelle)"""
     sgi_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
+    annex_data = serializers.JSONField(required=False)
     class Meta:
         model = AccountOpeningRequest
         fields = [
@@ -228,7 +231,7 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
             'wants_digital_opening', 'wants_in_person_opening', 'available_minimum_amount', 'wants_100_percent_digital_sgi',
             'funding_by_visa', 'funding_by_mobile_money', 'funding_by_bank_transfer', 'funding_by_intermediary', 'funding_by_wu_mg_ria', 'wants_xamila_as_intermediary',
             'prefer_service_quality_over_fees', 'sources_of_income', 'investor_profile',
-            'holder_info', 'photo', 'id_card_scan', 'wants_xamila_plus', 'authorize_xamila_to_receive_account_info'
+            'holder_info', 'photo', 'id_card_scan', 'annex_data', 'wants_xamila_plus', 'authorize_xamila_to_receive_account_info'
         ]
     def validate(self, attrs):
         # Normaliser les champs susceptibles d'arriver en multipart texte
@@ -264,6 +267,14 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
             attrs.get('funding_by_bank_transfer'), attrs.get('funding_by_intermediary'), attrs.get('funding_by_wu_mg_ria')
         ]):
             raise serializers.ValidationError("Sélectionnez au moins une méthode d'alimentation")
+        # annex_data may come as JSON string; parse safely
+        annex = attrs.get('annex_data')
+        if isinstance(annex, str):
+            try:
+                import json
+                attrs['annex_data'] = json.loads(annex)
+            except Exception:
+                attrs['annex_data'] = {}
         return attrs
     def create(self, validated_data):
         user = self.context['request'].user

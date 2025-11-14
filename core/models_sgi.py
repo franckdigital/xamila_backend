@@ -522,6 +522,9 @@ class AccountOpeningRequest(models.Model):
     wants_xamila_plus = models.BooleanField(default=False)
     authorize_xamila_to_receive_account_info = models.BooleanField(default=False)
 
+    # Annexes (pages 22, 23, 26 etc.) captured from the UI
+    annex_data = models.JSONField(default=dict, blank=True)
+
     # Métadonnées
     status = models.CharField(max_length=20, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
