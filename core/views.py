@@ -279,6 +279,77 @@ class SGISelectionView(APIView):
             )
 
 
+class ContractPDFPreviewView(APIView):
+    """Génère un PDF de prévisualisation sans sauvegarder la demande.
+    Accepte le même payload que la création, y compris annex_data.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            data = request.data.copy()
+            # Resolve SGI if provided
+            sgi = None
+            sgi_id = data.get('sgi_id') or data.get('sgi')
+            if sgi_id:
+                try:
+                    sgi = SGI.objects.get(id=sgi_id)
+                except SGI.DoesNotExist:
+                    sgi = None
+
+            # Parse annex_data if string
+            annex_data = data.get('annex_data')
+            if isinstance(annex_data, str):
+                import json
+                try:
+                    annex_data = json.loads(annex_data)
+                except Exception:
+                    annex_data = {}
+            elif not annex_data:
+                annex_data = {}
+
+            # Build a transient AOR object (not saved)
+            aor = AccountOpeningRequest(
+                customer=request.user,
+                sgi=sgi,
+                full_name=data.get('full_name') or request.user.get_full_name() or '',
+                email=data.get('email') or request.user.email or '',
+                phone=data.get('phone') or getattr(request.user, 'phone', '') or '',
+                country_of_residence=data.get('country_of_residence') or getattr(request.user, 'country_of_residence', '') or '',
+                nationality=data.get('nationality') or getattr(request.user, 'country', '') or '',
+                customer_banks_current_account=[],
+                wants_digital_opening=str(data.get('wants_digital_opening', 'true')).lower() == 'true',
+                wants_in_person_opening=str(data.get('wants_in_person_opening', 'false')).lower() == 'true',
+                available_minimum_amount=data.get('available_minimum_amount') or None,
+                wants_100_percent_digital_sgi=str(data.get('wants_100_percent_digital_sgi', 'false')).lower() == 'true',
+                funding_by_visa=str(data.get('funding_by_visa', 'false')).lower() == 'true',
+                funding_by_mobile_money=str(data.get('funding_by_mobile_money', 'false')).lower() == 'true',
+                funding_by_bank_transfer=str(data.get('funding_by_bank_transfer', 'false')).lower() == 'true',
+                funding_by_intermediary=str(data.get('funding_by_intermediary', 'false')).lower() == 'true',
+                funding_by_wu_mg_ria=str(data.get('funding_by_wu_mg_ria', 'false')).lower() == 'true',
+                prefers_service_quality_over_fees=bool(data.get('prefer_service_quality_over_fees')),
+                sources_of_income=data.get('sources_of_income') or '',
+                investor_profile=data.get('investor_profile') or 'PRUDENT',
+                holder_info=data.get('holder_info') or '',
+                annex_data=annex_data,
+            )
+
+            pdf_service = ContractPDFService()
+            ctx = pdf_service.build_context(aor)
+            # Inject annex overrides for template overlay
+            try:
+                ctx['annex'] = annex_data
+                pdf_service._last_ctx = ctx
+            except Exception:
+                pass
+
+            html = pdf_service.render_html(ctx)
+            return pdf_service.generate_pdf_response(html, filename='contrat_preview.pdf')
+        except Exception as e:
+            logger.error(f"Erreur prévisualisation PDF: {e}")
+            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class SGIComparatorView(APIView):
     """
     Comparateur et tri des SGI basé sur les conditions d'ouverture et filtres
