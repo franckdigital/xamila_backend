@@ -174,6 +174,7 @@ DEFAULT_CONTRACT_TEMPLATE_PDF = "/var/www/xamila/xamila_backend/contracts/GEK --
 # Optional: per-SGI mapping (keys must exactly match SGI.name)
 CONTRACT_TEMPLATES_BY_SGI = {
     "GEK": "/var/www/xamila/xamila_backend/contracts/GEK --Convention commerciale VF 2025.pdf",
+    "GEK CAPITAL": "/var/www/xamila/xamila_backend/contracts/GEK --Convention commerciale VF 2025.pdf",
     # "Another SGI": "/var/www/.../another_template.pdf",
 }
 

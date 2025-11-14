@@ -1,4 +1,5 @@
 from io import BytesIO
+import logging
 from django.template.loader import render_to_string
 from django.template import TemplateDoesNotExist
 from django.utils import timezone
@@ -328,8 +329,10 @@ class ContractPDFService:
             if isinstance(ctx, dict):
                 tmpl_bytes = self._generate_from_template(ctx)
             if tmpl_bytes:
+                logging.getLogger(__name__).info("ContractPDFService: using template-based generator")
                 resp = HttpResponse(tmpl_bytes, content_type='application/pdf')
                 resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+                resp['X-Contract-Generator'] = 'template'
                 return resp
         except Exception:
             pass
@@ -346,6 +349,8 @@ class ContractPDFService:
         HTML(string=html, base_url=getattr(settings, 'BASE_DIR', None)).write_pdf(pdf_io)
         pdf_io.seek(0)
 
+        logging.getLogger(__name__).info("ContractPDFService: using weasyprint fallback")
         resp = HttpResponse(pdf_io.read(), content_type='application/pdf')
         resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+        resp['X-Contract-Generator'] = 'weasyprint'
         return resp
