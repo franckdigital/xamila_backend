@@ -327,7 +327,7 @@ class ContractPDFPreviewView(APIView):
                 funding_by_bank_transfer=str(data.get('funding_by_bank_transfer', 'false')).lower() == 'true',
                 funding_by_intermediary=str(data.get('funding_by_intermediary', 'false')).lower() == 'true',
                 funding_by_wu_mg_ria=str(data.get('funding_by_wu_mg_ria', 'false')).lower() == 'true',
-                prefers_service_quality_over_fees=bool(data.get('prefer_service_quality_over_fees')),
+                prefer_service_quality_over_fees=bool(data.get('prefer_service_quality_over_fees')),
                 sources_of_income=data.get('sources_of_income') or '',
                 investor_profile=data.get('investor_profile') or 'PRUDENT',
                 holder_info=data.get('holder_info') or '',
