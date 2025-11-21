@@ -524,6 +524,20 @@ class AccountOpeningRequest(models.Model):
 
     # Annexes (pages 22, 23, 26 etc.) captured from the UI
     annex_data = models.JSONField(default=dict, blank=True)
+    
+    # PDF générés
+    contract_pdf = models.FileField(
+        upload_to="contracts/main/",
+        blank=True,
+        null=True,
+        help_text="Contrat principal (statique)"
+    )
+    annexes_pdf = models.FileField(
+        upload_to="contracts/annexes/",
+        blank=True,
+        null=True,
+        help_text="Annexes avec données dynamiques"
+    )
 
     # Métadonnées
     status = models.CharField(max_length=20, default="PENDING")
