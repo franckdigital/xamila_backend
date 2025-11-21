@@ -185,37 +185,58 @@ class ContractPDFService:
             return None
 
     def _generate_from_template(self, context: dict) -> bytes | None:
-        """Generate a PDF by overlaying text on a base template using reportlab + pypdf.
+        """
+        Generate a PDF by overlaying text on a base template using reportlab + pypdf.
+        Uses SGI-specific template classes for custom field positioning.
         Returns PDF bytes or None if not possible.
         """
         if not (REPORTLAB_AVAILABLE and PYPDF_AVAILABLE):
             return None
+        
         sgi = context.get('sgi')
         aor: AccountOpeningRequest = context.get('aor')
-        client = context.get('client')
         annex = context.get('annex') or getattr(aor, 'annex_data', None) or {}
-        template_path = self._maybe_get_template_path(sgi)
+        
+        # Get SGI-specific template class
+        from .pdf_templates import get_template_for_sgi
+        sgi_name = sgi.name if sgi else None
+        template_class = get_template_for_sgi(sgi_name)
+        template = template_class()
+        
+        # Get template path from SGI-specific class
+        template_path = template.get_template_path()
+        if not template_path:
+            # Fallback to old method
+            template_path = self._maybe_get_template_path(sgi)
         if not template_path:
             return None
+        
         try:
             reader = PdfReader(template_path)
             writer = PdfWriter()
-
-            def draw_checkbox(cvs, x, y, checked):
-                size = 4 * mm
-                cvs.rect(x, y, size, size, stroke=1, fill=0)
-                if checked:
-                    cvs.line(x, y, x + size, y + size)
-                    cvs.line(x, y + size, x + size, y)
+            
+            # Prepare context for template
+            template_context = {
+                'sgi': sgi,
+                'aor': aor,
+                'annex': annex,
+                'client': context.get('client'),
+                'terms': context.get('terms'),
+            }
 
             overlays = []
             pages_count = len(reader.pages)
             for page_index in range(pages_count):
                 ov = BytesIO()
                 c = canvas.Canvas(ov, pagesize=A4)
-                c.setFont("Helvetica", 10)
-
-                if sgi and (sgi.name or '').strip().upper() in ('GEK', 'GEK CAPITAL', 'GEK CAPITAL SA'):
+                c.setFont(template.font_name, template.font_size)
+                
+                # Use SGI-specific template to fill the page
+                template.fill_page(c, page_index, template_context)
+                
+                # OLD CODE BELOW - kept for backward compatibility if template doesn't handle page
+                # This will be removed once all SGIs have templates
+                if sgi and (sgi.name or '').strip().upper() in ('GEK', 'GEK CAPITAL', 'GEK CAPITAL SA') and False:
                     # Page 1 (cover/summary) – keep for context; main dynamic pages are 22, 23, 26
                     if page_index == 0:
                         x = 25 * mm
