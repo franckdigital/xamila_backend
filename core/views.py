@@ -346,8 +346,13 @@ class ContractPDFPreviewView(APIView):
             html = pdf_service.render_html(ctx)
             return pdf_service.generate_pdf_response(html, filename='contrat_preview.pdf')
         except Exception as e:
-            logger.error(f"Erreur prévisualisation PDF: {e}")
-            return Response({'error': 'Erreur interne'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"Erreur prévisualisation PDF: {e}\n{error_details}")
+            return Response({
+                'error': f'Erreur génération PDF: {str(e)}',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SGIComparatorView(APIView):
