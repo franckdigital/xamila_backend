@@ -396,6 +396,116 @@ class ContractApprovalView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AllSGIsListView(APIView):
+    """
+    Liste toutes les SGI avec pagination et recherche
+    GET /api/sgis/manager/list/
+    """
+    permission_classes = [IsAuthenticated, IsSGIManagerOrAdmin]
+    
+    def get(self, request):
+        try:
+            # Récupérer tous les paramètres de requête
+            page = int(request.query_params.get('page', 1))
+            page_size = int(request.query_params.get('page_size', 10))
+            search = request.query_params.get('search', '').strip()
+            
+            # Requête de base - toutes les SGI
+            sgis = SGI.objects.all()
+            
+            # Recherche
+            if search:
+                from django.db.models import Q
+                sgis = sgis.filter(
+                    Q(name__icontains=search) |
+                    Q(email__icontains=search) |
+                    Q(manager_name__icontains=search) |
+                    Q(manager_email__icontains=search)
+                )
+            
+            # Tri par ordre décroissant (plus récent en premier)
+            sgis = sgis.order_by('-created_at')
+            
+            # Pagination
+            total = sgis.count()
+            start = (page - 1) * page_size
+            end = start + page_size
+            sgis_page = sgis[start:end]
+            
+            # Sérialiser les données
+            results = []
+            for sgi in sgis_page:
+                # Récupérer les terms si disponibles
+                terms_data = None
+                try:
+                    terms = SGIAccountTerms.objects.get(sgi=sgi)
+                    terms_data = {
+                        'country': terms.country,
+                        'headquarters_address': terms.headquarters_address,
+                        'director_name': terms.director_name,
+                        'profile': terms.profile,
+                        'is_digital_opening': terms.is_digital_opening,
+                        'has_minimum_amount': terms.has_minimum_amount,
+                        'minimum_amount_value': str(terms.minimum_amount_value) if terms.minimum_amount_value is not None else None,
+                        'has_opening_fees': terms.has_opening_fees,
+                        'opening_fees_amount': str(terms.opening_fees_amount) if terms.opening_fees_amount is not None else None,
+                        'deposit_methods': terms.deposit_methods or [],
+                        'is_bank_subsidiary': terms.is_bank_subsidiary,
+                        'parent_bank_name': terms.parent_bank_name,
+                        'custody_fees': str(terms.custody_fees) if terms.custody_fees is not None else None,
+                        'account_maintenance_fees': str(terms.account_maintenance_fees) if terms.account_maintenance_fees is not None else None,
+                        'brokerage_fees_transactions_ordinary': str(terms.brokerage_fees_transactions_ordinary) if terms.brokerage_fees_transactions_ordinary is not None else None,
+                        'brokerage_fees_files': str(terms.brokerage_fees_files) if terms.brokerage_fees_files is not None else None,
+                        'brokerage_fees_transactions': str(terms.brokerage_fees_transactions) if terms.brokerage_fees_transactions is not None else None,
+                        'transfer_account_fees': str(terms.transfer_account_fees) if terms.transfer_account_fees is not None else None,
+                        'transfer_securities_fees': str(terms.transfer_securities_fees) if terms.transfer_securities_fees is not None else None,
+                        'pledge_fees': str(terms.pledge_fees) if terms.pledge_fees is not None else None,
+                        'redemption_methods': terms.redemption_methods or [],
+                        'preferred_customer_banks': terms.preferred_customer_banks or [],
+                    }
+                except SGIAccountTerms.DoesNotExist:
+                    pass
+                
+                results.append({
+                    'id': sgi.id,
+                    'name': sgi.name,
+                    'description': sgi.description,
+                    'email': sgi.email,
+                    'phone': sgi.phone,
+                    'address': sgi.address,
+                    'website': sgi.website,
+                    'logo': sgi.logo.url if sgi.logo else None,
+                    'manager_name': sgi.manager_name,
+                    'manager_email': sgi.manager_email,
+                    'manager_phone': sgi.manager_phone,
+                    'min_investment_amount': str(sgi.min_investment_amount),
+                    'max_investment_amount': str(sgi.max_investment_amount) if sgi.max_investment_amount is not None else None,
+                    'historical_performance': str(sgi.historical_performance),
+                    'management_fees': str(sgi.management_fees),
+                    'entry_fees': str(sgi.entry_fees),
+                    'is_active': sgi.is_active,
+                    'is_verified': sgi.is_verified,
+                    'created_at': sgi.created_at,
+                    'updated_at': sgi.updated_at,
+                    'terms': terms_data,
+                })
+            
+            return Response({
+                'results': results,
+                'total': total,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total + page_size - 1) // page_size,
+            })
+            
+        except Exception as e:
+            logger.error(f"Erreur liste SGI: {str(e)}")
+            return Response(
+                {"detail": f"Erreur lors de la récupération des SGI: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class MySGIView(APIView):
     """
     Récupère la SGI liée au manager connecté
