@@ -362,44 +362,73 @@ class SGIComparatorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        qs = SGI.objects.filter(is_active=True)
-        terms = SGIAccountTerms.objects.select_related('sgi').filter(sgi__in=qs)
-
         # Filtres
         country = request.query_params.get('country')
         bank_name = request.query_params.get('bank')
         sgi_name = request.query_params.get('sgi_name')
         digital_only = request.query_params.get('digital_only')
 
-        if country:
-            terms = terms.filter(country__iexact=country)
+        # Base: toutes les SGI actives
+        sgi_qs = SGI.objects.filter(is_active=True)
+        
+        # Filtrer par nom de SGI si spécifié
         if sgi_name:
-            terms = terms.filter(sgi__name__icontains=sgi_name)
-        if digital_only == 'true':
-            terms = terms.filter(is_digital_opening=True)
-        if bank_name:
-            terms = terms.filter(preferred_customer_banks__icontains=bank_name)
-
+            sgi_qs = sgi_qs.filter(name__icontains=sgi_name)
+        
+        # Récupérer les terms associés
+        terms_dict = {}
+        for term in SGIAccountTerms.objects.select_related('sgi').filter(sgi__in=sgi_qs):
+            terms_dict[term.sgi_id] = term
+        
+        # Filtrer par critères de terms
+        filtered_sgis = []
+        for sgi in sgi_qs:
+            term = terms_dict.get(sgi.id)
+            
+            # Si des filtres sont appliqués, vérifier les terms
+            if country or digital_only or bank_name:
+                if not term:
+                    continue  # Pas de terms, ne peut pas matcher les critères
+                
+                if country and term.country.lower() != country.lower():
+                    continue
+                if digital_only == 'true' and not term.is_digital_opening:
+                    continue
+                if bank_name and bank_name.lower() not in (term.preferred_customer_banks or []):
+                    continue
+            
+            filtered_sgis.append((sgi, term))
+        
+        # Si aucun résultat avec filtres, afficher toutes les SGI
+        if not filtered_sgis and (country or digital_only or bank_name):
+            filtered_sgis = [(sgi, terms_dict.get(sgi.id)) for sgi in sgi_qs]
+        
         # Tri
         order_by = request.query_params.get('order_by', 'minimum_amount_value')
-        direction = '' if request.query_params.get('order', 'asc') == 'asc' else '-'
-        safe_fields = {
-            'minimum_amount_value': 'minimum_amount_value',
-            'opening_fees_amount': 'opening_fees_amount',
-            'custody_fees': 'custody_fees',
-        }
-        if order_by in safe_fields:
-            terms = terms.order_by(f"{direction}{safe_fields[order_by]}")
-
+        direction = request.query_params.get('order', 'asc')
+        
+        def get_sort_value(item):
+            sgi, term = item
+            if order_by == 'minimum_amount_value':
+                return term.minimum_amount_value if term and term.minimum_amount_value else 0
+            elif order_by == 'opening_fees_amount':
+                return term.opening_fees_amount if term and term.opening_fees_amount else 0
+            elif order_by == 'custody_fees':
+                return term.custody_fees if term and term.custody_fees else 0
+            return 0
+        
+        filtered_sgis.sort(key=get_sort_value, reverse=(direction == 'desc'))
+        
+        # Construire la réponse
         data = []
-        for t in terms:
-            s = t.sgi
+        for sgi, term in filtered_sgis:
             data.append({
-                'sgi': SGIListSerializer(s).data,
-                'terms': SGIAccountTermsSerializer(t).data,
-                'avg_rating': float(SGIRating.objects.filter(sgi=s).aggregate(Avg('score'))['score__avg'] or 0),
-                'ratings_count': SGIRating.objects.filter(sgi=s).count(),
+                'sgi': SGIListSerializer(sgi).data,
+                'terms': SGIAccountTermsSerializer(term).data if term else None,
+                'avg_rating': float(SGIRating.objects.filter(sgi=sgi).aggregate(Avg('score'))['score__avg'] or 0),
+                'ratings_count': SGIRating.objects.filter(sgi=sgi).count(),
             })
+        
         return Response({'results': data, 'total': len(data)})
 
 

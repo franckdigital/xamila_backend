@@ -888,6 +888,35 @@ class SGICreateForManagerView(APIView):
             return Response({'error': f'Erreur lors de la création de la SGI: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SGIDeleteView(APIView):
+    """
+    Supprime une SGI spécifique par son ID
+    DELETE /api/sgis/manager/delete/<sgi_id>/
+    """
+    permission_classes = [IsAuthenticated, IsSGIManagerOrAdmin]
+    
+    def delete(self, request, sgi_id):
+        """Supprime une SGI par son ID"""
+        try:
+            sgi = SGI.objects.get(id=sgi_id)
+            sgi.delete()
+            return Response(
+                {"detail": "SGI supprimée avec succès."},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except SGI.DoesNotExist:
+            return Response(
+                {"detail": "SGI introuvable."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Erreur suppression SGI: {str(e)}")
+            return Response(
+                {"detail": f"Erreur lors de la suppression: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class ClientManagementView(APIView):
     """
     Gestion des clients par les managers SGI
