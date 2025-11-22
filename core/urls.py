@@ -70,6 +70,7 @@ urlpatterns = [
     path('sgis/manager/terms/', views.SGIManagerTermsView.as_view(), name='sgi_manager_terms'),
     path('sgis/manager/create/', views_sgi_manager.SGICreateForManagerView.as_view(), name='sgi_manager_create'),
     path('sgis/manager/list/', views_sgi_manager.AllSGIsListView.as_view(), name='sgi_manager_list'),
+    path('sgis/manager/update/<uuid:sgi_id>/', views_sgi_manager.SGIUpdateView.as_view(), name='sgi_manager_update'),
     path('sgis/manager/delete/<uuid:sgi_id>/', views_sgi_manager.SGIDeleteView.as_view(), name='sgi_manager_delete'),
     path('sgis/manager/mine/', views_sgi_manager.MySGIView.as_view(), name='sgi_manager_mine'),
     

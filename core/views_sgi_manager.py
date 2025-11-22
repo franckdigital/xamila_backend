@@ -888,6 +888,164 @@ class SGICreateForManagerView(APIView):
             return Response({'error': f'Erreur lors de la création de la SGI: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SGIUpdateView(APIView):
+    """
+    Modifie une SGI spécifique par son ID
+    PATCH /api/sgis/manager/update/<sgi_id>/
+    """
+    permission_classes = [IsAuthenticated, IsSGIManagerOrAdmin]
+    
+    def patch(self, request, sgi_id):
+        """Modifie une SGI par son ID"""
+        try:
+            sgi = SGI.objects.get(id=sgi_id)
+            data = request.data
+            
+            # Mettre à jour les champs de base de la SGI
+            if 'name' in data:
+                sgi.name = data.get('name')
+            if 'description' in data:
+                sgi.description = data.get('description') or ''
+            if 'email' in data:
+                sgi.email = data.get('email') or ''
+            if 'phone' in data:
+                sgi.phone = data.get('phone') or ''
+            if 'address' in data:
+                sgi.address = data.get('address') or ''
+            if 'website' in data:
+                sgi.website = data.get('website') or ''
+            if 'manager_name' in data:
+                sgi.manager_name = data.get('manager_name') or ''
+            if 'manager_email' in data:
+                sgi.manager_email = data.get('manager_email') or ''
+            if 'manager_phone' in data:
+                sgi.manager_phone = data.get('manager_phone') or ''
+            if 'min_investment_amount' in data:
+                from decimal import Decimal as D
+                sgi.min_investment_amount = D(str(data.get('min_investment_amount'))) if data.get('min_investment_amount') else D('0')
+            if 'max_investment_amount' in data:
+                from decimal import Decimal as D
+                val = data.get('max_investment_amount')
+                sgi.max_investment_amount = D(str(val)) if val not in (None, '') else None
+            if 'historical_performance' in data:
+                from decimal import Decimal as D
+                sgi.historical_performance = D(str(data.get('historical_performance'))) if data.get('historical_performance') else D('0')
+            if 'management_fees' in data:
+                from decimal import Decimal as D
+                sgi.management_fees = D(str(data.get('management_fees'))) if data.get('management_fees') else D('0')
+            if 'entry_fees' in data:
+                from decimal import Decimal as D
+                sgi.entry_fees = D(str(data.get('entry_fees'))) if data.get('entry_fees') else D('0')
+            if 'is_active' in data:
+                sgi.is_active = str(data.get('is_active')).lower() in ('true', '1', 'yes')
+            if 'is_verified' in data:
+                sgi.is_verified = str(data.get('is_verified')).lower() in ('true', '1', 'yes')
+            
+            # Logo
+            if 'logo' in request.FILES:
+                sgi.logo = request.FILES['logo']
+            
+            sgi.save()
+            
+            # Mettre à jour Terms si fourni
+            import json
+            def parse_bool(val, default=False):
+                if isinstance(val, bool):
+                    return val
+                if val is None:
+                    return default
+                s = str(val).lower()
+                return s in ('1', 'true', 'yes', 'on')
+            def parse_json_list(val):
+                if val is None or val == "":
+                    return []
+                if isinstance(val, (list, tuple)):
+                    return list(val)
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return [x.strip() for x in str(val).split(',') if x.strip()]
+            def parse_decimal_nullable(val):
+                try:
+                    from decimal import Decimal as D
+                    return D(str(val)) if val not in (None, '') else None
+                except Exception:
+                    return None
+            
+            terms_fields = [
+                'country','headquarters_address','director_name','profile','is_digital_opening',
+                'has_minimum_amount','minimum_amount_value','has_opening_fees','opening_fees_amount',
+                'deposit_methods','is_bank_subsidiary','parent_bank_name','custody_fees',
+                'account_maintenance_fees','brokerage_fees_transactions_ordinary','brokerage_fees_files',
+                'brokerage_fees_transactions','transfer_account_fees','transfer_securities_fees','pledge_fees',
+                'redemption_methods','preferred_customer_banks'
+            ]
+            if any(k in data for k in terms_fields):
+                defaults = {}
+                if 'country' in data:
+                    defaults['country'] = data.get('country') or ''
+                if 'headquarters_address' in data:
+                    defaults['headquarters_address'] = data.get('headquarters_address') or ''
+                if 'director_name' in data:
+                    defaults['director_name'] = data.get('director_name') or ''
+                if 'profile' in data:
+                    defaults['profile'] = data.get('profile') or ''
+                if 'is_digital_opening' in data:
+                    defaults['is_digital_opening'] = parse_bool(data.get('is_digital_opening'), True)
+                if 'has_minimum_amount' in data:
+                    defaults['has_minimum_amount'] = parse_bool(data.get('has_minimum_amount'), False)
+                if 'minimum_amount_value' in data:
+                    defaults['minimum_amount_value'] = data.get('minimum_amount_value') or ''
+                if 'has_opening_fees' in data:
+                    defaults['has_opening_fees'] = parse_bool(data.get('has_opening_fees'), False)
+                if 'opening_fees_amount' in data:
+                    defaults['opening_fees_amount'] = data.get('opening_fees_amount') or ''
+                if 'deposit_methods' in data:
+                    defaults['deposit_methods'] = parse_json_list(data.get('deposit_methods'))
+                if 'is_bank_subsidiary' in data:
+                    defaults['is_bank_subsidiary'] = parse_bool(data.get('is_bank_subsidiary'), False)
+                if 'parent_bank_name' in data:
+                    defaults['parent_bank_name'] = data.get('parent_bank_name') or ''
+                if 'custody_fees' in data:
+                    defaults['custody_fees'] = parse_decimal_nullable(data.get('custody_fees'))
+                if 'account_maintenance_fees' in data:
+                    defaults['account_maintenance_fees'] = parse_decimal_nullable(data.get('account_maintenance_fees'))
+                if 'brokerage_fees_transactions_ordinary' in data:
+                    defaults['brokerage_fees_transactions_ordinary'] = parse_decimal_nullable(data.get('brokerage_fees_transactions_ordinary'))
+                if 'brokerage_fees_files' in data:
+                    defaults['brokerage_fees_files'] = parse_decimal_nullable(data.get('brokerage_fees_files'))
+                if 'brokerage_fees_transactions' in data:
+                    defaults['brokerage_fees_transactions'] = parse_decimal_nullable(data.get('brokerage_fees_transactions'))
+                if 'transfer_account_fees' in data:
+                    defaults['transfer_account_fees'] = parse_decimal_nullable(data.get('transfer_account_fees'))
+                if 'transfer_securities_fees' in data:
+                    defaults['transfer_securities_fees'] = parse_decimal_nullable(data.get('transfer_securities_fees'))
+                if 'pledge_fees' in data:
+                    defaults['pledge_fees'] = parse_decimal_nullable(data.get('pledge_fees'))
+                if 'redemption_methods' in data:
+                    defaults['redemption_methods'] = parse_json_list(data.get('redemption_methods'))
+                if 'preferred_customer_banks' in data:
+                    defaults['preferred_customer_banks'] = parse_json_list(data.get('preferred_customer_banks'))
+                
+                SGIAccountTerms.objects.update_or_create(sgi=sgi, defaults=defaults)
+            
+            return Response(
+                {"detail": "SGI modifiée avec succès.", "id": str(sgi.id)},
+                status=status.HTTP_200_OK
+            )
+        except SGI.DoesNotExist:
+            return Response(
+                {"detail": "SGI introuvable."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Erreur modification SGI: {str(e)}")
+            return Response(
+                {"detail": f"Erreur lors de la modification: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class SGIDeleteView(APIView):
     """
     Supprime une SGI spécifique par son ID

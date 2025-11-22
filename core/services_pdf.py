@@ -164,7 +164,7 @@ class ContractPDFService:
         """
         return html
 
-    def _maybe_get_template_path(self, sgi) -> str | None:
+    def _maybe_get_template_path(self, sgi):
         """Resolve a base PDF template path, either per SGI or default from settings.
         Settings candidates (first found wins):
           - SGI-specific mapping: settings.CONTRACT_TEMPLATES_BY_SGI = { 'GEK': '/path/to/gek.pdf', ... }
@@ -184,7 +184,7 @@ class ContractPDFService:
         except Exception:
             return None
 
-    def _generate_from_template(self, context: dict) -> bytes | None:
+    def _generate_from_template(self, context: dict):
         """
         Generate a PDF by overlaying text on a base template using reportlab + pypdf.
         Uses SGI-specific template classes for custom field positioning.
