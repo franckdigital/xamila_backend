@@ -19,6 +19,9 @@ from .models import (
 )
 from .models_sgi import SGIAccountTerms, SGIRating, AccountOpeningRequest
 from .services_pdf import ContractPDFService, WEASYPRINT_AVAILABLE
+from .services_email import ContractEmailService
+from .services_annex_pdf import AnnexPDFService
+from django.core.files.base import ContentFile
 from .serializers import (
     SGISerializer, SGIListSerializer, ClientInvestmentProfileSerializer,
     ClientInvestmentProfileCreateSerializer, SGIMatchingRequestSerializer,
@@ -664,152 +667,107 @@ class AccountOpeningRequestCreateView(APIView):
 
         try:
             req_obj = serializer.save()
+            logger.info(f"AccountOpeningRequest créé: {req_obj.id}")
 
-            # Emails enrichis (HTML + pièces jointes si disponibles)
-            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com')
-            xamila_email = getattr(settings, 'XAMILA_CONTACT_EMAIL', 'contact@xamila.com')
-
-            sgi_name = getattr(req_obj.sgi, 'name', None) if req_obj.sgi else None
-            funding_methods = []
-            if req_obj.funding_by_visa: funding_methods.append('Carte Visa')
-            if req_obj.funding_by_mobile_money: funding_methods.append('Mobile Money')
-            if req_obj.funding_by_bank_transfer: funding_methods.append('Virement Bancaire')
-            if req_obj.funding_by_intermediary: funding_methods.append('Intermédiaire/Mandataire')
-            if req_obj.funding_by_wu_mg_ria: funding_methods.append('WU/MoneyGram/Ria')
-            banks = ', '.join(req_obj.customer_banks_current_account or [])
-            prefs = f"Digitale: {'Oui' if req_obj.wants_digital_opening else 'Non'} | En personne: {'Oui' if req_obj.wants_in_person_opening else 'Non'}"
-
-            html_body = f"""
-                <h2>Confirmation de votre demande d'ouverture de compte titre</h2>
-                <p>Bonjour {req_obj.full_name},</p>
-                <p>Nous avons bien reçu votre demande. Notre équipe vous recontactera sous 48h.</p>
-                <h3>Récapitulatif</h3>
-                <ul>
-                  <li><strong>SGI choisie:</strong> {sgi_name or 'Non spécifiée'}</li>
-                  <li><strong>Nom complet:</strong> {req_obj.full_name}</li>
-                  <li><strong>Email:</strong> {req_obj.email}</li>
-                  <li><strong>Téléphone:</strong> {req_obj.phone}</li>
-                  <li><strong>Pays de résidence:</strong> {req_obj.country_of_residence}</li>
-                  <li><strong>Nationalité:</strong> {req_obj.nationality}</li>
-                  <li><strong>Montant disponible:</strong> {req_obj.available_minimum_amount or 'N/A'}</li>
-                  <li><strong>Méthodes d'alimentation:</strong> {', '.join(funding_methods) or 'N/A'}</li>
-                  <li><strong>Banques actuelles:</strong> {banks or 'N/A'}</li>
-                  <li><strong>Préférences:</strong> {prefs}</li>
-                </ul>
-                <p>Merci de votre confiance,</p>
-                <p>L'équipe Xamila</p>
-            """
-            text_body = (
-                f"Bonjour {req_obj.full_name},\n\n"
-                "Nous avons bien reçu votre demande. Notre équipe vous recontactera sous 48h.\n\n"
-                f"SGI: {sgi_name or 'Non spécifiée'}\n"
-                f"Nom: {req_obj.full_name}\n"
-                f"Email: {req_obj.email}\n"
-                f"Téléphone: {req_obj.phone}\n"
-                f"Pays de résidence: {req_obj.country_of_residence}\n"
-                f"Nationalité: {req_obj.nationality}\n"
-                f"Montant disponible: {req_obj.available_minimum_amount or 'N/A'}\n"
-                f"Méthodes d'alimentation: {', '.join(funding_methods) or 'N/A'}\n"
-                f"Banques actuelles: {banks or 'N/A'}\n"
-                f"Préférences: {prefs}\n\n"
-                "Merci de votre confiance,\nL'équipe Xamila"
-            )
-
-            # Email au client (HTML + texte)
-            msg_client = EmailMultiAlternatives(
-                subject="Xamila - Confirmation de votre demande d'ouverture de compte titre",
-                body=text_body,
-                from_email=from_email,
-                to=[req_obj.email],
-            )
-            msg_client.attach_alternative(html_body, "text/html")
-            # Joindre les fichiers uploadés si présents et accessibles
+            # === GÉNÉRATION DES PDFs ===
+            contract_pdf_bytes = None
+            annexes_pdf_bytes = None
+            
             try:
-                if req_obj.photo and req_obj.photo.name:
-                    with req_obj.photo.open('rb') as f:
-                        msg_client.attach(filename='photo_identite' , content=f.read(), mimetype='application/octet-stream')
-                if req_obj.id_card_scan and req_obj.id_card_scan.name:
-                    with req_obj.id_card_scan.open('rb') as f:
-                        msg_client.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
-            except Exception:
-                pass
-            # Attach PDF if WeasyPrint is available
-            try:
-                if WEASYPRINT_AVAILABLE:
-                    pdf_service = ContractPDFService()
-                    ctx = pdf_service.build_context(req_obj)
-                    html = pdf_service.render_html(ctx)
-                    # Use service's generate to produce response and read its content
-                    pdf_resp = pdf_service.generate_pdf_response(html, filename=f"contrat_{req_obj.id}.pdf")
-                    if pdf_resp.status_code == 200 and pdf_resp.content:
-                        msg_client.attach(filename=f"contrat_{req_obj.id}.pdf", content=pdf_resp.content, mimetype='application/pdf')
-            except Exception:
-                pass
-            msg_client.send(fail_silently=True)
-
-            # Notification SGI (si email manager connu)
-            if req_obj.sgi:
-                manager_email = getattr(req_obj.sgi, 'manager_email', None)
-                if manager_email:
-                    html_sgi = f"""
-                        <h2>Nouvelle demande de mise en relation client</h2>
-                        <p><strong>SGI:</strong> {sgi_name}</p>
-                        <ul>
-                          <li><strong>Client:</strong> {req_obj.full_name} - {req_obj.email} - {req_obj.phone}</li>
-                          <li><strong>Pays/Nationalité:</strong> {req_obj.country_of_residence} / {req_obj.nationality}</li>
-                          <li><strong>Montant disponible:</strong> {req_obj.available_minimum_amount or 'N/A'}</li>
-                          <li><strong>Méthodes d'alimentation:</strong> {', '.join(funding_methods) or 'N/A'}</li>
-                          <li><strong>Banques actuelles:</strong> {banks or 'N/A'}</li>
-                          <li><strong>Préférences:</strong> {prefs}</li>
-                        </ul>
-                    """
-                    text_sgi = (
-                        f"Nouvelle demande - SGI {sgi_name}\n"
-                        f"Client: {req_obj.full_name} - {req_obj.email} - {req_obj.phone}\n"
-                        f"Pays/Nationalité: {req_obj.country_of_residence} / {req_obj.nationality}\n"
-                        f"Montant: {req_obj.available_minimum_amount or 'N/A'}\n"
-                        f"Moyens: {', '.join(funding_methods) or 'N/A'}\n"
-                        f"Banques: {banks or 'N/A'}\n"
-                        f"Préférences: {prefs}\n"
+                # 1. Générer le contrat vierge (PDF statique de la SGI)
+                pdf_service = ContractPDFService()
+                ctx = pdf_service.build_context(req_obj)
+                html = pdf_service.render_html(ctx)
+                contract_response = pdf_service.generate_pdf_response(html)
+                
+                if contract_response.status_code == 200:
+                    contract_pdf_bytes = contract_response.content
+                    logger.info(f"Contrat PDF généré: {len(contract_pdf_bytes)} bytes")
+                    
+                    # Sauvegarder le contrat en base de données
+                    req_obj.contract_pdf.save(
+                        f'contrat_{req_obj.id}.pdf',
+                        ContentFile(contract_pdf_bytes),
+                        save=False
                     )
-                    msg_sgi = EmailMultiAlternatives(
-                        subject='Xamila - Nouvelle demande de mise en relation client',
-                        body=text_sgi,
+                else:
+                    logger.warning(f"Échec génération contrat PDF: status {contract_response.status_code}")
+                    
+            except Exception as e:
+                logger.error(f"Erreur génération contrat PDF: {e}", exc_info=True)
+            
+            try:
+                # 2. Générer les annexes pré-remplies
+                annex_service = AnnexPDFService()
+                annex_data = req_obj.annex_data or {}
+                
+                if annex_data:
+                    annexes_buffer = annex_service.generate_annex_pdf(req_obj, annex_data)
+                    annexes_pdf_bytes = annexes_buffer.read()
+                    annexes_buffer.seek(0)
+                    logger.info(f"Annexes PDF générées: {len(annexes_pdf_bytes)} bytes")
+                    
+                    # Sauvegarder les annexes en base de données
+                    req_obj.annexes_pdf.save(
+                        f'annexes_{req_obj.id}.pdf',
+                        ContentFile(annexes_pdf_bytes),
+                        save=False
+                    )
+                else:
+                    logger.warning("Pas de données d'annexes disponibles")
+                    
+            except Exception as e:
+                logger.error(f"Erreur génération annexes PDF: {e}", exc_info=True)
+            
+            # Sauvegarder les modifications (PDFs)
+            req_obj.save()
+            
+            # === ENVOI DES EMAILS ===
+            if contract_pdf_bytes and annexes_pdf_bytes:
+                try:
+                    # Récupérer l'email du manager SGI
+                    sgi_manager_email = None
+                    if req_obj.sgi:
+                        sgi_manager_email = getattr(req_obj.sgi, 'manager_email', None)
+                    
+                    # Récupérer les emails des admins
+                    from .models import User
+                    admin_emails = list(
+                        User.objects.filter(role='ADMIN', is_active=True)
+                        .values_list('email', flat=True)
+                    )
+                    
+                    # Utiliser le nouveau service d'email
+                    email_service = ContractEmailService()
+                    email_results = email_service.send_contract_emails(
+                        aor=req_obj,
+                        contract_pdf=contract_pdf_bytes,
+                        annexes_pdf=annexes_pdf_bytes,
+                        sgi_manager_email=sgi_manager_email,
+                        admin_emails=admin_emails if admin_emails else None
+                    )
+                    
+                    logger.info(f"Résultats envoi emails: {email_results}")
+                    
+                    if email_results.get('errors'):
+                        logger.warning(f"Erreurs lors de l'envoi des emails: {email_results['errors']}")
+                        
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'envoi des emails: {e}", exc_info=True)
+            else:
+                logger.warning("PDFs non générés, envoi d'emails de base")
+                # Fallback: envoyer un email simple sans PDFs
+                try:
+                    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@xamila.com')
+                    send_mail(
+                        subject='Xamila - Confirmation de votre demande d\'ouverture de compte titre',
+                        message=f"Bonjour {req_obj.full_name},\n\nVotre demande a été reçue. Nous vous recontacterons sous 48h.",
                         from_email=from_email,
-                        to=[manager_email],
+                        recipient_list=[req_obj.email],
+                        fail_silently=True,
                     )
-                    msg_sgi.attach_alternative(html_sgi, "text/html")
-                    try:
-                        if req_obj.photo and req_obj.photo.name:
-                            with req_obj.photo.open('rb') as f:
-                                msg_sgi.attach(filename='photo_identite', content=f.read(), mimetype='application/octet-stream')
-                        if req_obj.id_card_scan and req_obj.id_card_scan.name:
-                            with req_obj.id_card_scan.open('rb') as f:
-                                msg_sgi.attach(filename='piece_identite', content=f.read(), mimetype='application/octet-stream')
-                    except Exception:
-                        pass
-                    # Attach PDF to SGI as well if available
-                    try:
-                        if WEASYPRINT_AVAILABLE:
-                            pdf_service = ContractPDFService()
-                            ctx = pdf_service.build_context(req_obj)
-                            html = pdf_service.render_html(ctx)
-                            pdf_resp = pdf_service.generate_pdf_response(html, filename=f"contrat_{req_obj.id}.pdf")
-                            if pdf_resp.status_code == 200 and pdf_resp.content:
-                                msg_sgi.attach(filename=f"contrat_{req_obj.id}.pdf", content=pdf_resp.content, mimetype='application/pdf')
-                    except Exception:
-                        pass
-                    msg_sgi.send(fail_silently=True)
-
-            # Copie Xamila (HTML court)
-            msg_xamila = EmailMultiAlternatives(
-                subject='Xamila - Nouvelle demande ouverture de compte',
-                body=f"Demande #{req_obj.id} par {req_obj.full_name} ({req_obj.email})",
-                from_email=from_email,
-                to=[xamila_email],
-            )
-            msg_xamila.attach_alternative(f"<p>Demande <strong>#{req_obj.id}</strong> par <strong>{req_obj.full_name}</strong> ({req_obj.email})</p>", "text/html")
-            msg_xamila.send(fail_silently=True)
+                except Exception as e:
+                    logger.error(f"Erreur envoi email fallback: {e}")
 
             return Response(AccountOpeningRequestSerializer(req_obj).data, status=status.HTTP_201_CREATED)
         except (OSError, PermissionError) as e:
