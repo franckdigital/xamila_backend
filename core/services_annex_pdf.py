@@ -95,10 +95,6 @@ class AnnexPDFService:
         
         # Fait à / Le
         y -= 10*mm
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "Fait en deux exemplaires originaux")
-        
-        y -= 10*mm
         c.setFont("Helvetica", 10)
         place = p21.get('place', 'Abidjan')
         date = p21.get('date', '')
@@ -109,7 +105,20 @@ class AnnexPDFService:
         y -= 20*mm
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30*mm, y, "LE(S) TITULAIRE(S)")
-        c.drawString(120*mm, y, "GEK CAPITAL")
+        # SGI label dynamique: NSIA pour NSIA, sinon nom de la SGI ou libellé par défaut
+        sgi_label = "GEK CAPITAL"
+        try:
+            sgi = getattr(aor, "sgi", None)
+            if sgi and getattr(sgi, "name", None):
+                name = sgi.name.strip()
+                upper = name.upper()
+                if "NSIA" in upper:
+                    sgi_label = "NSIA"
+                else:
+                    sgi_label = name
+        except Exception:
+            pass
+        c.drawString(120*mm, y, sgi_label)
         
         y -= 5*mm
         c.setFont("Helvetica", 8)

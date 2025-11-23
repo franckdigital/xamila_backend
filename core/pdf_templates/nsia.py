@@ -1,6 +1,7 @@
 """
-NSIA FINANCE PDF Template with custom field mappings.
-Different positions and layout from GEK CAPITAL.
+NSIA FINANCE PDF Template with complete field mappings (same structure as GEK CAPITAL).
+Uses the NSIA PDF template but with identical field logic to GEK for consistency.
+All 95 annex fields are handled across pages 22, 23, and 26.
 """
 import os
 from typing import Dict, Any
@@ -12,7 +13,7 @@ from .base import BasePDFTemplate
 class NSIATemplate(BasePDFTemplate):
     """
     PDF Template for NSIA FINANCE contract.
-    Uses different field positions and layout compared to GEK CAPITAL.
+    Handles all 95 annex fields across pages 22, 23, and 26 (same as GEK CAPITAL).
     """
     
     def get_template_path(self) -> str:
@@ -25,8 +26,8 @@ class NSIATemplate(BasePDFTemplate):
     
     def fill_page(self, canvas_obj, page_index: int, context: Dict[str, Any]):
         """
-        Fill specific pages with data for NSIA template.
-        NSIA has a different page structure than GEK.
+        Fill specific pages with data for NSIA FINANCE template.
+        Uses same page structure as GEK CAPITAL for consistency.
         
         Args:
             canvas_obj: ReportLab canvas object
@@ -36,273 +37,318 @@ class NSIATemplate(BasePDFTemplate):
         annex = self.get_annex_data(context)
         aor = self.get_aor_data(context)
         
-        # NSIA template structure (adjust based on actual template)
-        # Page 1 (index 0): Cover page
+        # Page 1 (index 0): Cover/Summary page
         if page_index == 0:
             self._fill_page_1_cover(canvas_obj, annex, aor)
         
-        # Page 15 (index 14): Identity form (example - adjust to actual NSIA page)
-        elif page_index == 14:
-            self._fill_page_15_identity(canvas_obj, annex, aor)
+        # Page 2 (index 1): Initial form page
+        elif page_index == 1:
+            self._fill_page_2_initial_form(canvas_obj, annex, aor)
         
-        # Page 16 (index 15): Contact and address
-        elif page_index == 15:
-            self._fill_page_16_contact(canvas_obj, annex, aor)
+        # Page 22 (index 21): Annexe 1 - Complete identity form
+        elif page_index == 21:
+            self._fill_page_22_annex1(canvas_obj, annex, aor)
         
-        # Page 18 (index 17): Account characteristics
-        elif page_index == 17:
-            self._fill_page_18_account(canvas_obj, annex, aor)
+        # Page 23 (index 22): Communication and restrictions
+        elif page_index == 22:
+            self._fill_page_23_communication(canvas_obj, annex, aor)
+        
+        # Page 26 (index 25): Account characteristics
+        elif page_index == 25:
+            self._fill_page_26_account_characteristics(canvas_obj, annex, aor)
     
     def _fill_page_1_cover(self, c, annex: Dict, aor):
-        """
-        Fill NSIA cover page.
-        NSIA uses different positions than GEK.
-        """
-        c.setFont("Helvetica-Bold", 12)
+        """Fill page 1 (cover/summary) for NSIA FINANCE."""
+        c.setFont("Helvetica-Bold", 11)
         
-        # Client name (different position for NSIA)
-        x, y = 40 * mm, 240 * mm
+        # Client name
+        x, y = 25 * mm, 250 * mm
         self.draw_text(c, x, y, getattr(aor, 'full_name', ''))
         
         # Contact info
-        y -= 10 * mm
+        y -= 7 * mm
         c.setFont("Helvetica", 10)
         p22 = annex.get('page22', {})
         email = self.safe_get(p22, 'email') or getattr(aor, 'email', '')
         phone = self.safe_get(p22, 'phone') or getattr(aor, 'phone', '')
+        self.draw_text(c, x, y, f"{email} | {phone}")
         
-        self.draw_text(c, x, y, f"Email: {email}")
-        y -= 6 * mm
-        self.draw_text(c, x, y, f"Tél: {phone}")
-        
-        # Country
-        y -= 6 * mm
+        # Country and nationality
+        y -= 7 * mm
         country = getattr(aor, 'country_of_residence', '')
-        self.draw_text(c, x, y, f"Pays: {country}")
+        nationality = self.safe_get(p22, 'nationality') or getattr(aor, 'nationality', '')
+        self.draw_text(c, x, y, f"{country} / {nationality}")
         
-        # Date
-        from django.utils import timezone
+        # Funding methods
         y -= 10 * mm
-        self.draw_text(c, x, y, f"Date: {timezone.now().strftime('%d/%m/%Y')}")
+        methods = []
+        if getattr(aor, 'funding_by_visa', False): methods.append('VISA')
+        if getattr(aor, 'funding_by_mobile_money', False): methods.append('MOBILE MONEY')
+        if getattr(aor, 'funding_by_bank_transfer', False): methods.append('VIREMENT')
+        if getattr(aor, 'funding_by_intermediary', False): methods.append('INTERMEDIAIRE')
+        if getattr(aor, 'funding_by_wu_mg_ria', False): methods.append('WU/MG/RIA')
+        self.draw_text(c, x, y, f"Méthodes: {', '.join(methods) or '—'}")
+        
+        # Account type checkbox (individual by default)
+        p26 = annex.get('page26', {})
+        self.draw_checkbox(c, 17 * mm, 262 * mm, self.safe_get(p26, 'account_individual', 'true').lower() == 'true')
+        
+        # Signature
+        self.draw_text(c, 35 * mm, 35 * mm, self.safe_get(p26, 'place') or country)
+        
+        from django.utils import timezone
+        date = self.safe_get(p26, 'date') or timezone.now().strftime('%d/%m/%Y')
+        self.draw_text(c, 120 * mm, 35 * mm, self.format_date(date))
     
-    def _fill_page_15_identity(self, c, annex: Dict, aor):
+    def _fill_page_2_initial_form(self, c, annex: Dict, aor):
+        """Fill page 2 (initial form) for NSIA FINANCE."""
+        p22 = annex.get('page22', {})
+        
+        # Name fields
+        x1, y1 = 52 * mm, 238 * mm
+        parts = (getattr(aor, 'full_name', '') or '').split()
+        nom = parts[-1] if parts else ''
+        prenoms = ' '.join(parts[:-1]) if len(parts) > 1 else ''
+        
+        # Override with annex data if available
+        nom = self.safe_get(p22, 'last_name') or nom
+        prenoms = self.safe_get(p22, 'first_names') or prenoms
+        
+        self.draw_text(c, x1, y1, nom)
+        self.draw_text(c, 140 * mm, y1, prenoms)
+        
+        # Nationality
+        y2 = 230 * mm
+        nationality = self.safe_get(p22, 'nationality') or getattr(aor, 'nationality', '')
+        self.draw_text(c, 52 * mm, y2, nationality)
+        
+        # Contact info
+        self.draw_text(c, 30 * mm, 128 * mm, self.safe_get(p22, 'phone') or getattr(aor, 'phone', ''))
+        self.draw_text(c, 30 * mm, 120 * mm, self.safe_get(p22, 'email') or getattr(aor, 'email', ''))
+    
+    def _fill_page_22_annex1(self, c, annex: Dict, aor):
         """
-        Fill NSIA identity page (page 15).
-        Complete identity information with NSIA-specific positions.
+        Fill page 22 (Annexe 1) for NSIA FINANCE - Complete identity form with ALL 55 fields.
         """
         p22 = annex.get('page22', {})
         
-        # NSIA uses different layout - fields are more spread out
-        
-        # === PERSONNE PHYSIQUE ===
+        # === SECTION 1: PERSONNE PHYSIQUE (11 fields) ===
         if not self.safe_get(p22, 'is_company', 'false').lower() == 'true':
-            # Civilité (NSIA format - different positions)
+            # Civilité
             civility = self.safe_get(p22, 'civility', 'Monsieur')
-            y_civ = 255 * mm
             if civility == 'Monsieur':
-                self.draw_checkbox(c, 30 * mm, y_civ, True)
+                self.draw_checkbox(c, 20 * mm, 260 * mm, True)
             elif civility == 'Madame':
-                self.draw_checkbox(c, 60 * mm, y_civ, True)
+                self.draw_checkbox(c, 40 * mm, 260 * mm, True)
             elif civility == 'Mademoiselle':
-                self.draw_checkbox(c, 90 * mm, y_civ, True)
+                self.draw_checkbox(c, 60 * mm, 260 * mm, True)
             
-            # Nom et prénoms (NSIA positions)
+            # Nom / Prénoms
             parts = (getattr(aor, 'full_name', '') or '').split()
             nom = self.safe_get(p22, 'last_name') or (parts[-1] if parts else '')
             prenoms = self.safe_get(p22, 'first_names') or (' '.join(parts[:-1]) if len(parts) > 1 else '')
             
-            self.draw_text(c, 40 * mm, 245 * mm, f"Nom: {nom}")
-            self.draw_text(c, 40 * mm, 238 * mm, f"Prénoms: {prenoms}")
+            self.draw_text(c, 52 * mm, 238 * mm, nom)
+            self.draw_text(c, 140 * mm, 238 * mm, prenoms)
             
-            # Nom de jeune fille
             maiden_name = self.safe_get(p22, 'maiden_name')
             if maiden_name:
-                self.draw_text(c, 40 * mm, 231 * mm, f"Nom de jeune fille: {maiden_name}")
+                self.draw_text(c, 52 * mm, 232 * mm, maiden_name)
             
             # Date et lieu de naissance
             birth_date = self.format_date(self.safe_get(p22, 'birth_date'))
             birth_place = self.safe_get(p22, 'birth_place')
-            self.draw_text(c, 40 * mm, 224 * mm, f"Né(e) le: {birth_date}")
-            self.draw_text(c, 40 * mm, 217 * mm, f"À: {birth_place}")
+            self.draw_text(c, 30 * mm, 225 * mm, birth_date)
+            self.draw_text(c, 80 * mm, 225 * mm, birth_place)
             
             # Nationalité
             nationality = self.safe_get(p22, 'nationality') or getattr(aor, 'nationality', '')
-            self.draw_text(c, 40 * mm, 210 * mm, f"Nationalité: {nationality}")
+            self.draw_text(c, 52 * mm, 230 * mm, nationality)
             
             # Pièce d'identité
             id_type = self.safe_get(p22, 'id_type', 'Carte d\'identité')
             id_number = self.safe_get(p22, 'id_number')
             id_valid = self.format_date(self.safe_get(p22, 'id_valid_until'))
             
-            y_id = 200 * mm
-            self.draw_text(c, 40 * mm, y_id, f"Type: {id_type}")
-            self.draw_text(c, 40 * mm, y_id - 7 * mm, f"N°: {id_number}")
-            self.draw_text(c, 40 * mm, y_id - 14 * mm, f"Valide jusqu'au: {id_valid}")
+            if 'carte' in id_type.lower():
+                self.draw_checkbox(c, 20 * mm, 218 * mm, True)
+            elif 'passeport' in id_type.lower():
+                self.draw_checkbox(c, 60 * mm, 218 * mm, True)
+            elif 'permis' in id_type.lower():
+                self.draw_checkbox(c, 100 * mm, 218 * mm, True)
+            
+            self.draw_text(c, 30 * mm, 212 * mm, id_number)
+            self.draw_text(c, 100 * mm, 212 * mm, id_valid)
         
-        # === PERSONNE MORALE ===
+        # === SECTION 2: PERSONNE MORALE (10 fields) ===
         else:
             company_name = self.safe_get(p22, 'company_name')
             company_ncc = self.safe_get(p22, 'company_ncc')
             company_rccm = self.safe_get(p22, 'company_rccm')
             
-            self.draw_text(c, 40 * mm, 245 * mm, f"Raison sociale: {company_name}")
-            self.draw_text(c, 40 * mm, 238 * mm, f"NCC: {company_ncc}")
-            self.draw_text(c, 40 * mm, 231 * mm, f"RCCM: {company_rccm}")
+            self.draw_text(c, 30 * mm, 250 * mm, company_name)
+            self.draw_text(c, 30 * mm, 244 * mm, f"NCC: {company_ncc}")
+            self.draw_text(c, 100 * mm, 244 * mm, f"RCCM: {company_rccm}")
             
-            # Représentant
+            # Représentant légal
             rep_name = self.safe_get(p22, 'representative_name')
             rep_first = self.safe_get(p22, 'representative_first_names')
+            rep_birth_date = self.format_date(self.safe_get(p22, 'representative_birth_date'))
+            rep_birth_place = self.safe_get(p22, 'representative_birth_place')
+            rep_nationality = self.safe_get(p22, 'representative_nationality')
             rep_function = self.safe_get(p22, 'representative_function')
             
-            y_rep = 220 * mm
-            self.draw_text(c, 40 * mm, y_rep, f"Représenté par: {rep_name} {rep_first}")
-            self.draw_text(c, 40 * mm, y_rep - 7 * mm, f"Fonction: {rep_function}")
+            self.draw_text(c, 30 * mm, 235 * mm, f"{rep_name} {rep_first}")
+            self.draw_text(c, 30 * mm, 230 * mm, f"Né(e) le {rep_birth_date} à {rep_birth_place}")
+            self.draw_text(c, 30 * mm, 225 * mm, f"Nationalité: {rep_nationality}")
+            self.draw_text(c, 30 * mm, 220 * mm, f"Fonction: {rep_function}")
         
-        # === RESTRICTIONS ===
-        is_minor = self.safe_get(p22, 'is_minor', 'false').lower() == 'true'
-        is_protected = self.safe_get(p22, 'is_protected_adult', 'false').lower() == 'true'
-        
-        y_restrict = 170 * mm
-        self.draw_checkbox(c, 40 * mm, y_restrict, is_minor)
-        self.draw_text(c, 50 * mm, y_restrict, "Mineur")
-        
-        self.draw_checkbox(c, 40 * mm, y_restrict - 7 * mm, is_protected)
-        self.draw_text(c, 50 * mm, y_restrict - 7 * mm, "Majeur protégé")
-        
-        # === REPRÉSENTANT LÉGAL (si applicable) ===
-        if is_minor or is_protected:
-            guardian_name = self.safe_get(p22, 'guardian_name')
-            guardian_first = self.safe_get(p22, 'guardian_first_names')
-            guardian_nationality = self.safe_get(p22, 'guardian_nationality')
-            
-            y_guard = 150 * mm
-            self.draw_text(c, 40 * mm, y_guard, f"Représentant légal: {guardian_name} {guardian_first}")
-            self.draw_text(c, 40 * mm, y_guard - 7 * mm, f"Nationalité: {guardian_nationality}")
-    
-    def _fill_page_16_contact(self, c, annex: Dict, aor):
-        """
-        Fill NSIA contact and address page (page 16).
-        """
-        p22 = annex.get('page22', {})
-        
-        # === ADRESSE FISCALE ===
+        # === SECTION 3: ADRESSE FISCALE (8 fields) ===
         fiscal_address = self.safe_get(p22, 'fiscal_address')
         fiscal_street = self.safe_get(p22, 'fiscal_street_number')
         fiscal_postal = self.safe_get(p22, 'fiscal_postal_code')
         fiscal_city = self.safe_get(p22, 'fiscal_city')
         fiscal_country = self.safe_get(p22, 'fiscal_country') or getattr(aor, 'country_of_residence', '')
         
-        y_fiscal = 240 * mm
-        self.draw_text(c, 40 * mm, y_fiscal, "ADRESSE FISCALE")
-        self.draw_text(c, 40 * mm, y_fiscal - 8 * mm, fiscal_address)
-        self.draw_text(c, 40 * mm, y_fiscal - 15 * mm, f"{fiscal_street}, {fiscal_postal}")
-        self.draw_text(c, 40 * mm, y_fiscal - 22 * mm, f"{fiscal_city}, {fiscal_country}")
+        y_fiscal = 195 * mm
+        self.draw_text(c, 30 * mm, y_fiscal, fiscal_address)
+        self.draw_text(c, 30 * mm, y_fiscal - 5 * mm, f"{fiscal_street} - {fiscal_postal}")
+        self.draw_text(c, 30 * mm, y_fiscal - 10 * mm, fiscal_city)
+        self.draw_text(c, 30 * mm, 176 * mm, fiscal_country)
         
         # Résidence fiscale
         is_ivory = self.safe_get(p22, 'is_fiscal_resident_ivory', 'false').lower() == 'true'
         is_cedeao = self.safe_get(p22, 'is_cedeao_member', 'false').lower() == 'true'
         is_outside = self.safe_get(p22, 'is_outside_cedeao', 'false').lower() == 'true'
         
-        y_res = 200 * mm
-        self.draw_checkbox(c, 40 * mm, y_res, is_ivory)
-        self.draw_text(c, 50 * mm, y_res, "Résident fiscal ivoirien")
+        self.draw_checkbox(c, 20 * mm, 170 * mm, is_ivory)
+        self.draw_checkbox(c, 70 * mm, 170 * mm, is_cedeao)
+        self.draw_checkbox(c, 120 * mm, 170 * mm, is_outside)
         
-        self.draw_checkbox(c, 40 * mm, y_res - 7 * mm, is_cedeao)
-        self.draw_text(c, 50 * mm, y_res - 7 * mm, "Membre CEDEAO")
-        
-        self.draw_checkbox(c, 40 * mm, y_res - 14 * mm, is_outside)
-        self.draw_text(c, 50 * mm, y_res - 14 * mm, "Hors CEDEAO")
-        
-        # === ADRESSE POSTALE ===
+        # === SECTION 4: ADRESSE POSTALE (5 fields) ===
         postal_address = self.safe_get(p22, 'postal_address')
         if postal_address:
+            postal_door = self.safe_get(p22, 'postal_door_number')
+            postal_code = self.safe_get(p22, 'postal_code')
             postal_city = self.safe_get(p22, 'postal_city')
             postal_country = self.safe_get(p22, 'postal_country')
             
-            y_postal = 170 * mm
-            self.draw_text(c, 40 * mm, y_postal, "ADRESSE POSTALE (si différente)")
-            self.draw_text(c, 40 * mm, y_postal - 8 * mm, postal_address)
-            self.draw_text(c, 40 * mm, y_postal - 15 * mm, f"{postal_city}, {postal_country}")
+            y_postal = 155 * mm
+            self.draw_text(c, 30 * mm, y_postal, postal_address)
+            self.draw_text(c, 30 * mm, y_postal - 5 * mm, f"Porte {postal_door} - {postal_code}")
+            self.draw_text(c, 30 * mm, y_postal - 10 * mm, f"{postal_city}, {postal_country}")
         
-        # === COORDONNÉES ===
+        # === SECTION 5: COORDONNÉES (4 fields) ===
         phone = self.safe_get(p22, 'phone') or getattr(aor, 'phone', '')
         home_phone = self.safe_get(p22, 'home_phone')
         email = self.safe_get(p22, 'email') or getattr(aor, 'email', '')
         
-        y_contact = 130 * mm
-        self.draw_text(c, 40 * mm, y_contact, "COORDONNÉES")
-        self.draw_text(c, 40 * mm, y_contact - 8 * mm, f"Tél portable: {phone}")
-        if home_phone:
-            self.draw_text(c, 40 * mm, y_contact - 15 * mm, f"Tél domicile: {home_phone}")
-        self.draw_text(c, 40 * mm, y_contact - 22 * mm, f"Email: {email}")
+        self.draw_text(c, 30 * mm, 128 * mm, phone)
+        self.draw_text(c, 120 * mm, 128 * mm, home_phone)
+        self.draw_text(c, 30 * mm, 120 * mm, email)
         
-        # === CONVOCATION ÉLECTRONIQUE ===
-        p23 = annex.get('page23', {})
-        consent_email = self.safe_get(p23, 'consent_email', 'true').lower() == 'true'
+        # === SECTION 6: RESTRICTIONS (6 fields) ===
+        is_minor = self.safe_get(p22, 'is_minor', 'false').lower() == 'true'
+        minor_legal = self.safe_get(p22, 'minor_legal_admin', 'false').lower() == 'true'
+        minor_tutelle = self.safe_get(p22, 'minor_tutelle', 'false').lower() == 'true'
+        is_protected = self.safe_get(p22, 'is_protected_adult', 'false').lower() == 'true'
+        protected_curatelle = self.safe_get(p22, 'protected_curatelle', 'false').lower() == 'true'
+        protected_tutelle = self.safe_get(p22, 'protected_tutelle', 'false').lower() == 'true'
+        
+        y_restrict = 105 * mm
+        self.draw_checkbox(c, 20 * mm, y_restrict, is_minor)
+        if is_minor:
+            self.draw_checkbox(c, 40 * mm, y_restrict - 5 * mm, minor_legal)
+            self.draw_checkbox(c, 80 * mm, y_restrict - 5 * mm, minor_tutelle)
+        
+        self.draw_checkbox(c, 20 * mm, y_restrict - 12 * mm, is_protected)
+        if is_protected:
+            self.draw_checkbox(c, 40 * mm, y_restrict - 17 * mm, protected_curatelle)
+            self.draw_checkbox(c, 80 * mm, y_restrict - 17 * mm, protected_tutelle)
+        
+        # === SECTION 7: REPRÉSENTANT LÉGAL (9 fields) ===
+        if is_minor or is_protected:
+            guardian_name = self.safe_get(p22, 'guardian_name')
+            guardian_first = self.safe_get(p22, 'guardian_first_names')
+            guardian_birth_date = self.format_date(self.safe_get(p22, 'guardian_birth_date'))
+            guardian_birth_place = self.safe_get(p22, 'guardian_birth_place')
+            guardian_nationality = self.safe_get(p22, 'guardian_nationality')
+            guardian_geo = self.safe_get(p22, 'guardian_geo_address')
+            guardian_postal = self.safe_get(p22, 'guardian_postal_address')
+            guardian_city = self.safe_get(p22, 'guardian_city')
+            guardian_country = self.safe_get(p22, 'guardian_country')
+            
+            y_guard = 75 * mm
+            self.draw_text(c, 30 * mm, y_guard, f"{guardian_name} {guardian_first}")
+            self.draw_text(c, 30 * mm, y_guard - 5 * mm, f"Né(e) le {guardian_birth_date} à {guardian_birth_place}")
+            self.draw_text(c, 30 * mm, y_guard - 10 * mm, f"Nationalité: {guardian_nationality}")
+            self.draw_text(c, 30 * mm, y_guard - 15 * mm, guardian_geo)
+            self.draw_text(c, 30 * mm, y_guard - 20 * mm, f"{guardian_postal}, {guardian_city}, {guardian_country}")
+        
+        # === SECTION 8: CONVOCATION ÉLECTRONIQUE (2 fields) ===
         consent_electronic = self.safe_get(p22, 'consent_electronic', 'true').lower() == 'true'
+        consent_docs = self.safe_get(p22, 'consent_electronic_docs', 'true').lower() == 'true'
         
-        y_consent = 90 * mm
-        self.draw_checkbox(c, 40 * mm, y_consent, consent_electronic)
-        self.draw_text(c, 50 * mm, y_consent, "J'accepte la convocation électronique")
-        
-        self.draw_checkbox(c, 40 * mm, y_consent - 7 * mm, consent_email)
-        self.draw_text(c, 50 * mm, y_consent - 7 * mm, "J'accepte les communications par email")
+        self.draw_checkbox(c, 20 * mm, 45 * mm, consent_electronic)
+        self.draw_checkbox(c, 20 * mm, 38 * mm, consent_docs)
     
-    def _fill_page_18_account(self, c, annex: Dict, aor):
-        """
-        Fill NSIA account characteristics page (page 18).
-        """
+    def _fill_page_23_communication(self, c, annex: Dict, aor):
+        """Fill page 23 - Communication and restrictions (2 fields) for NSIA FINANCE."""
+        p23 = annex.get('page23', {})
+        p22 = annex.get('page22', {})
+        
+        # Email consent checkbox
+        consent_email = self.safe_get(p23, 'consent_email', 'true').lower() == 'true'
+        self.draw_checkbox(c, 26 * mm, 60 * mm, consent_email)
+        
+        # Email address
+        email = self.safe_get(p23, 'email') or self.safe_get(p22, 'email') or getattr(aor, 'email', '')
+        self.draw_text(c, 30 * mm, 56 * mm, email)
+    
+    def _fill_page_26_account_characteristics(self, c, annex: Dict, aor):
+        """Fill page 26 (Annexe 4) - Account characteristics and procuration (38 fields) for NSIA FINANCE."""
         p26 = annex.get('page26', {})
         
-        # === TYPE DE COMPTE ===
+        # === SECTION 1: TYPE DE COMPTE (19 fields) ===
         account_individual = self.safe_get(p26, 'account_individual', 'true').lower() == 'true'
         account_joint = self.safe_get(p26, 'account_joint', 'false').lower() == 'true'
         account_indivision = self.safe_get(p26, 'account_indivision', 'false').lower() == 'true'
         
-        y_type = 250 * mm
-        self.draw_text(c, 40 * mm, y_type, "TYPE DE COMPTE")
+        self.draw_checkbox(c, 17 * mm, 262 * mm, account_individual)
+        self.draw_checkbox(c, 17 * mm, 255 * mm, account_joint)
+        self.draw_checkbox(c, 17 * mm, 248 * mm, account_indivision)
         
-        self.draw_checkbox(c, 40 * mm, y_type - 10 * mm, account_individual)
-        self.draw_text(c, 50 * mm, y_type - 10 * mm, "Compte individuel")
-        
-        self.draw_checkbox(c, 40 * mm, y_type - 17 * mm, account_joint)
-        self.draw_text(c, 50 * mm, y_type - 17 * mm, "Compte joint")
-        
-        self.draw_checkbox(c, 40 * mm, y_type - 24 * mm, account_indivision)
-        self.draw_text(c, 50 * mm, y_type - 24 * mm, "Compte en indivision")
-        
-        # === CO-TITULAIRES (si compte joint) ===
+        # Compte joint (7 fields)
         if account_joint:
             joint_a_name = self.safe_get(p26, 'joint_holder_a_name')
             joint_a_first = self.safe_get(p26, 'joint_holder_a_first_names')
+            joint_a_birth = self.format_date(self.safe_get(p26, 'joint_holder_a_birth_date'))
             joint_b_name = self.safe_get(p26, 'joint_holder_b_name')
             joint_b_first = self.safe_get(p26, 'joint_holder_b_first_names')
+            joint_b_birth = self.format_date(self.safe_get(p26, 'joint_holder_b_birth_date'))
             
-            y_joint = 210 * mm
-            self.draw_text(c, 40 * mm, y_joint, "CO-TITULAIRES")
-            self.draw_text(c, 40 * mm, y_joint - 8 * mm, f"Titulaire A: {joint_a_name} {joint_a_first}")
-            self.draw_text(c, 40 * mm, y_joint - 15 * mm, f"Titulaire B: {joint_b_name} {joint_b_first}")
+            y_joint = 250 * mm
+            self.draw_text(c, 40 * mm, y_joint, f"A: {joint_a_name} {joint_a_first} ({joint_a_birth})")
+            self.draw_text(c, 40 * mm, y_joint - 5 * mm, f"B: {joint_b_name} {joint_b_first} ({joint_b_birth})")
         
-        # === PERSONNE DÉSIGNÉE ===
+        # Compte indivision (9 fields)
+        if account_indivision:
+            holders = []
+            for letter in ['a', 'b', 'c', 'd']:
+                name = self.safe_get(p26, f'indivision_holder_{letter}_name')
+                first = self.safe_get(p26, f'indivision_holder_{letter}_first_names')
+                if name:
+                    holders.append(f"{name} {first}")
+            
+            y_indiv = 243 * mm
+            for i, holder in enumerate(holders):
+                self.draw_text(c, 40 * mm, y_indiv - (i * 5 * mm), f"{chr(65+i)}: {holder}")
+        
+        # === SECTION 2: PERSONNE DÉSIGNÉE (1 field) ===
         designated_name = self.safe_get(p26, 'designated_operator_name') or getattr(aor, 'full_name', '')
-        y_desig = 180 * mm
-        self.draw_text(c, 40 * mm, y_desig, "PERSONNE DÉSIGNÉE")
-        self.draw_text(c, 40 * mm, y_desig - 8 * mm, designated_name)
+        self.draw_text(c, 30 * mm, 205 * mm, designated_name)
         
-        # === PROCURATION ===
-        has_procuration = self.safe_get(p26, 'has_procuration', 'false').lower() == 'true'
-        
-        y_proc = 150 * mm
-        self.draw_checkbox(c, 40 * mm, y_proc, has_procuration)
-        self.draw_text(c, 50 * mm, y_proc, "Procuration")
-        
-        if has_procuration:
-            mandataire_name = self.safe_get(p26, 'mandataire_name')
-            mandataire_first = self.safe_get(p26, 'mandataire_first_names')
-            
-            self.draw_text(c, 40 * mm, y_proc - 10 * mm, f"Mandataire: {mandataire_name} {mandataire_first}")
-        
-        # === SIGNATURE ===
+        # === SECTION 3: SIGNATURE (2 fields) ===
         place = self.safe_get(p26, 'place') or getattr(aor, 'country_of_residence', '')
         date = self.safe_get(p26, 'date')
         if not date:
@@ -311,6 +357,45 @@ class NSIATemplate(BasePDFTemplate):
         else:
             date = self.format_date(date)
         
-        y_sign = 60 * mm
-        self.draw_text(c, 40 * mm, y_sign, f"Fait à {place}, le {date}")
-        self.draw_text(c, 40 * mm, y_sign - 10 * mm, "Signature du titulaire:")
+        self.draw_text(c, 35 * mm, 35 * mm, place)
+        self.draw_text(c, 120 * mm, 35 * mm, date)
+        
+        # === SECTION 4: PROCURATION (17 fields) ===
+        has_procuration = self.safe_get(p26, 'has_procuration', 'false').lower() == 'true'
+        
+        if has_procuration:
+            # Mandant (8 fields)
+            mandant_civility = self.safe_get(p26, 'mandant_civility', 'Monsieur')
+            mandant_name = self.safe_get(p26, 'mandant_name')
+            mandant_first = self.safe_get(p26, 'mandant_first_names')
+            mandant_address = self.safe_get(p26, 'mandant_address')
+            mandant_postal = self.safe_get(p26, 'mandant_postal_code')
+            mandant_city = self.safe_get(p26, 'mandant_city')
+            mandant_country = self.safe_get(p26, 'mandant_country')
+            account_number = self.safe_get(p26, 'account_number')
+            
+            y_mandant = 180 * mm
+            self.draw_text(c, 30 * mm, y_mandant, f"{mandant_civility} {mandant_name} {mandant_first}")
+            self.draw_text(c, 30 * mm, y_mandant - 5 * mm, mandant_address)
+            self.draw_text(c, 30 * mm, y_mandant - 10 * mm, f"{mandant_postal} {mandant_city}, {mandant_country}")
+            self.draw_text(c, 30 * mm, y_mandant - 15 * mm, f"Compte n°: {account_number}")
+            
+            # Mandataire (7 fields)
+            mandataire_civility = self.safe_get(p26, 'mandataire_civility', 'Monsieur')
+            mandataire_name = self.safe_get(p26, 'mandataire_name')
+            mandataire_first = self.safe_get(p26, 'mandataire_first_names')
+            mandataire_address = self.safe_get(p26, 'mandataire_address')
+            mandataire_postal = self.safe_get(p26, 'mandataire_postal_code')
+            mandataire_city = self.safe_get(p26, 'mandataire_city')
+            mandataire_country = self.safe_get(p26, 'mandataire_country')
+            
+            y_mandataire = 145 * mm
+            self.draw_text(c, 30 * mm, y_mandataire, f"{mandataire_civility} {mandataire_name} {mandataire_first}")
+            self.draw_text(c, 30 * mm, y_mandataire - 5 * mm, mandataire_address)
+            self.draw_text(c, 30 * mm, y_mandataire - 10 * mm, f"{mandataire_postal} {mandataire_city}, {mandataire_country}")
+            
+            # Signature procuration (2 fields)
+            proc_place = self.safe_get(p26, 'procuration_place')
+            proc_date = self.format_date(self.safe_get(p26, 'procuration_date'))
+            
+            self.draw_text(c, 30 * mm, 110 * mm, f"Fait à {proc_place}, le {proc_date}")
