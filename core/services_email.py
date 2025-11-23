@@ -25,16 +25,18 @@ class ContractEmailService:
         aor,
         contract_pdf: bytes,
         annexes_pdf: bytes,
-        sgi_manager_email: Optional[str] = None
+        sgi_manager_email: Optional[str] = None,
+        admin_emails: Optional[List[str]] = None
     ) -> dict:
         """
-        Envoie les emails avec le contrat et les annexes.
+        Envoie les emails avec le contrat, les annexes, la photo et la CNI.
         
         Args:
             aor: AccountOpeningRequest instance
             contract_pdf: Contenu du PDF du contrat principal
             annexes_pdf: Contenu du PDF des annexes
             sgi_manager_email: Email du manager SGI (optionnel)
+            admin_emails: Liste des emails admin (optionnel)
             
         Returns:
             dict avec les rÃ©sultats d'envoi
@@ -43,6 +45,7 @@ class ContractEmailService:
             'client': False,
             'sgi_manager': False,
             'xamila_team': False,
+            'admin': False,
             'errors': []
         }
         
@@ -79,6 +82,18 @@ class ContractEmailService:
             logger.error(error_msg)
             results['errors'].append(error_msg)
         
+        # Email des admins
+        if admin_emails:
+            for admin_email in admin_emails:
+                try:
+                    self._send_admin_email(aor, admin_email, contract_pdf, annexes_pdf)
+                    results['admin'] = True
+                    logger.info(f"Email envoyÃ© Ã  l'admin: {admin_email}")
+                except Exception as e:
+                    error_msg = f"Erreur envoi email admin {admin_email}: {e}"
+                    logger.error(error_msg)
+                    results['errors'].append(error_msg)
+        
         return results
     
     def _send_client_email(self, aor, to_email: str, contract_pdf: bytes, annexes_pdf: bytes):
@@ -107,6 +122,8 @@ class ContractEmailService:
                 <ul>
                     <li><strong>Contrat principal</strong> : Convention d'ouverture de compte-titres</li>
                     <li><strong>Annexes</strong> : Formulaires complÃ©tÃ©s avec vos informations</li>
+                    <li><strong>Photo d'identitÃ©</strong> : Votre photo</li>
+                    <li><strong>PiÃ¨ce d'identitÃ©</strong> : Scan de votre CNI/Passeport</li>
                 </ul>
                 
                 <p><strong>Prochaines Ã©tapes :</strong></p>
@@ -146,16 +163,45 @@ class ContractEmailService:
         email.content_subtype = "html"
         
         # Ajouter les piÃ¨ces jointes
+        sgi_name = aor.sgi.name.replace(' ', '_') if aor.sgi else 'SGI'
+        client_name = aor.full_name.replace(" ", "_")
+        
         email.attach(
-            f'Contrat_GEK_CAPITAL_{aor.full_name.replace(" ", "_")}.pdf',
+            f'Contrat_{sgi_name}_{client_name}.pdf',
             contract_pdf,
             'application/pdf'
         )
         email.attach(
-            f'Annexes_{aor.full_name.replace(" ", "_")}.pdf',
+            f'Annexes_{sgi_name}_{client_name}.pdf',
             annexes_pdf,
             'application/pdf'
         )
+        
+        # Ajouter la photo si disponible
+        if aor.photo:
+            try:
+                photo_content = aor.photo.read()
+                aor.photo.seek(0)  # Reset file pointer
+                email.attach(
+                    f'Photo_{client_name}.{aor.photo.name.split(".")[-1]}',
+                    photo_content,
+                    f'image/{aor.photo.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la photo: {e}")
+        
+        # Ajouter la CNI si disponible
+        if aor.id_card_scan:
+            try:
+                id_content = aor.id_card_scan.read()
+                aor.id_card_scan.seek(0)  # Reset file pointer
+                email.attach(
+                    f'CNI_{client_name}.{aor.id_card_scan.name.split(".")[-1]}',
+                    id_content,
+                    'application/pdf' if aor.id_card_scan.name.endswith('.pdf') else f'image/{aor.id_card_scan.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la CNI: {e}")
         
         # Envoyer
         email.send()
@@ -207,16 +253,44 @@ class ContractEmailService:
         )
         email.content_subtype = "html"
         
+        client_name = aor.full_name.replace(" ", "_")
+        
         email.attach(
-            f'Contrat_{aor.full_name.replace(" ", "_")}.pdf',
+            f'Contrat_{client_name}.pdf',
             contract_pdf,
             'application/pdf'
         )
         email.attach(
-            f'Annexes_{aor.full_name.replace(" ", "_")}.pdf',
+            f'Annexes_{client_name}.pdf',
             annexes_pdf,
             'application/pdf'
         )
+        
+        # Ajouter la photo si disponible
+        if aor.photo:
+            try:
+                photo_content = aor.photo.read()
+                aor.photo.seek(0)
+                email.attach(
+                    f'Photo_{client_name}.{aor.photo.name.split(".")[-1]}',
+                    photo_content,
+                    f'image/{aor.photo.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la photo: {e}")
+        
+        # Ajouter la CNI si disponible
+        if aor.id_card_scan:
+            try:
+                id_content = aor.id_card_scan.read()
+                aor.id_card_scan.seek(0)
+                email.attach(
+                    f'CNI_{client_name}.{aor.id_card_scan.name.split(".")[-1]}',
+                    id_content,
+                    'application/pdf' if aor.id_card_scan.name.endswith('.pdf') else f'image/{aor.id_card_scan.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la CNI: {e}")
         
         email.send()
     
@@ -266,6 +340,8 @@ class ContractEmailService:
         )
         email.content_subtype = "html"
         
+        client_name = aor.full_name.replace(" ", "_")
+        
         email.attach(
             f'Contrat_{aor.id}.pdf',
             contract_pdf,
@@ -276,5 +352,123 @@ class ContractEmailService:
             annexes_pdf,
             'application/pdf'
         )
+        
+        # Ajouter la photo si disponible
+        if aor.photo:
+            try:
+                photo_content = aor.photo.read()
+                aor.photo.seek(0)
+                email.attach(
+                    f'Photo_{client_name}.{aor.photo.name.split(".")[-1]}',
+                    photo_content,
+                    f'image/{aor.photo.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la photo: {e}")
+        
+        # Ajouter la CNI si disponible
+        if aor.id_card_scan:
+            try:
+                id_content = aor.id_card_scan.read()
+                aor.id_card_scan.seek(0)
+                email.attach(
+                    f'CNI_{client_name}.{aor.id_card_scan.name.split(".")[-1]}',
+                    id_content,
+                    'application/pdf' if aor.id_card_scan.name.endswith('.pdf') else f'image/{aor.id_card_scan.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la CNI: {e}")
+        
+        email.send()
+    
+    def _send_admin_email(self, aor, to_email: str, contract_pdf: bytes, annexes_pdf: bytes):
+        ""Envoie l'email à un administrateur""
+        subject = f"[ADMIN] Nouvelle demande - {aor.full_name} - {aor.sgi.name if aor.sgi else 'SGI'}"
+        
+        html_message = f""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #d32f2f;">?? Nouvelle demande d'ouverture de compte (ADMIN)</h2>
+                
+                <p><strong>Client :</strong> {aor.full_name}</p>
+                <p><strong>SGI :</strong> {aor.sgi.name if aor.sgi else 'N/A'}</p>
+                <p><strong>Email :</strong> {aor.email}</p>
+                <p><strong>Téléphone :</strong> {aor.phone}</p>
+                
+                <p style="background-color: #ffebee; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
+                    <strong>ID Demande :</strong> {aor.id}<br>
+                    <strong>Profil :</strong> {aor.investor_profile}<br>
+                    <strong>Pays :</strong> {aor.country_of_residence}<br>
+                    <strong>Nationalité :</strong> {aor.nationality}
+                </p>
+                
+                <p><strong>Préférences :</strong></p>
+                <ul>
+                    <li>Ouverture digitale : {'Oui' if aor.wants_digital_opening else 'Non'}</li>
+                    <li>Ouverture en personne : {'Oui' if aor.wants_in_person_opening else 'Non'}</li>
+                    <li>Xamila+ : {'Oui' if aor.wants_xamila_plus else 'Non'}</li>
+                </ul>
+                
+                <p><strong>Documents en pièces jointes :</strong></p>
+                <ul>
+                    <li>Contrat complet</li>
+                    <li>Annexes pré-remplies</li>
+                    <li>Photo d'identité</li>
+                    <li>Pièce d'identité (CNI/Passeport)</li>
+                </ul>
+                
+                <p><strong>Administration Xamila</strong></p>
+            </div>
+        </body>
+        </html>
+        ""
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_message,
+            from_email=self.from_email,
+            to=[to_email],
+        )
+        email.content_subtype = "html"
+        
+        client_name = aor.full_name.replace(" ", "_")
+        
+        email.attach(
+            f'Contrat_{aor.id}.pdf',
+            contract_pdf,
+            'application/pdf'
+        )
+        email.attach(
+            f'Annexes_{aor.id}.pdf',
+            annexes_pdf,
+            'application/pdf'
+        )
+        
+        # Ajouter la photo si disponible
+        if aor.photo:
+            try:
+                photo_content = aor.photo.read()
+                aor.photo.seek(0)
+                email.attach(
+                    f'Photo_{client_name}.{aor.photo.name.split(".")[-1]}',
+                    photo_content,
+                    f'image/{aor.photo.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la photo: {e}")
+        
+        # Ajouter la CNI si disponible
+        if aor.id_card_scan:
+            try:
+                id_content = aor.id_card_scan.read()
+                aor.id_card_scan.seek(0)
+                email.attach(
+                    f'CNI_{client_name}.{aor.id_card_scan.name.split(".")[-1]}',
+                    id_content,
+                    'application/pdf' if aor.id_card_scan.name.endswith('.pdf') else f'image/{aor.id_card_scan.name.split(".")[-1]}'
+                )
+            except Exception as e:
+                logger.warning(f"Impossible d'attacher la CNI: {e}")
         
         email.send()
