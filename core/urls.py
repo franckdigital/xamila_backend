@@ -108,6 +108,7 @@ urlpatterns = [
     path('account-opening/authorize/', views.XamilaAuthorizationToggleView.as_view(), name='xamila-authorization-toggle'),
     path('account-opening/contract/pdf/', views.ContractPDFGenerateView.as_view(), name='contract-pdf-generate'),
     path('account-opening/contract/preview/', views.ContractPDFPreviewView.as_view(), name='contract-pdf-preview'),
+    path('download-commercial-contract/', views.DownloadCommercialContractView.as_view(), name='download-commercial-contract'),
 
     # === ENDPOINTS MANAGER DASHBOARD ===
     path('manager/clients/', views_mgr.ManagerClientsView.as_view(), name='manager-clients'),

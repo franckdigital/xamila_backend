@@ -9,7 +9,9 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse, Http404
 import logging
+import os
 
 from .models import (
     SGI, ClientInvestmentProfile, SGIMatchingRequest,
@@ -1162,3 +1164,55 @@ class EmailNotificationListView(generics.ListAPIView):
             queryset = queryset.filter(status=status_filter)
         
         return queryset.order_by('-created_at')
+
+
+class DownloadCommercialContractView(APIView):
+    """
+    Télécharge le fichier PDF de convention commerciale selon la SGI.
+    GET /api/download-commercial-contract/?sgi_name=GEK CAPITAL
+    ou
+    GET /api/download-commercial-contract/?sgi_name=NSIA
+    """
+    permission_classes = [permissions.AllowAny]  # Accessible sans authentification
+    
+    def get(self, request):
+        sgi_name = request.query_params.get('sgi_name', '').strip().upper()
+        
+        # Mapping des noms de SGI vers les fichiers PDF
+        pdf_mapping = {
+            'GEK': 'GEK --Convention commerciale VF 2025.pdf',
+            'GEK CAPITAL': 'GEK --Convention commerciale VF 2025.pdf',
+            'GEK CAPITAL SA': 'GEK --Convention commerciale VF 2025.pdf',
+            'NSIA': 'NSIA_Convention_Compte_Titres.pdf',
+            'NSIA FINANCE': 'NSIA_Convention_Compte_Titres.pdf',
+            'NSIA FINANCES': 'NSIA_Convention_Compte_Titres.pdf',
+        }
+        
+        # Trouver le fichier correspondant
+        pdf_filename = pdf_mapping.get(sgi_name)
+        
+        if not pdf_filename:
+            return Response(
+                {'error': f'SGI non reconnue: {sgi_name}. Utilisez "GEK CAPITAL" ou "NSIA"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Chemin complet du fichier
+        pdf_path = os.path.join(settings.BASE_DIR, 'contracts', pdf_filename)
+        
+        # Vérifier que le fichier existe
+        if not os.path.exists(pdf_path):
+            logger.error(f"Fichier PDF introuvable: {pdf_path}")
+            raise Http404(f"Fichier de convention commerciale introuvable pour {sgi_name}")
+        
+        # Retourner le fichier
+        try:
+            response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+            return response
+        except Exception as e:
+            logger.error(f"Erreur lors du téléchargement du PDF: {str(e)}")
+            return Response(
+                {'error': 'Erreur lors du téléchargement du fichier'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
