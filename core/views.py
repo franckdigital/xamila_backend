@@ -1216,3 +1216,70 @@ class DownloadCommercialContractView(APIView):
                 {'error': 'Erreur lors du téléchargement du fichier'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class DownloadAnnexesPDFView(APIView):
+    """
+    Génère et télécharge un PDF des annexes pré-remplies (pages 21, 22, 23, 26).
+    POST /api/download-annexes-pdf/
+    Body: { sgi_id, annex_data: { page21, page22, page23, page26 } }
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        try:
+            from .services_annex_pdf import AnnexPDFService
+            from .models import SGI
+            from io import BytesIO
+            
+            sgi_id = request.data.get('sgi_id')
+            annex_data = request.data.get('annex_data', {})
+            
+            if not sgi_id:
+                return Response(
+                    {'error': 'sgi_id requis'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Récupérer la SGI
+            try:
+                sgi = SGI.objects.get(id=sgi_id)
+            except SGI.DoesNotExist:
+                return Response(
+                    {'error': 'SGI introuvable'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Créer un objet fictif pour AOR (Account Opening Request)
+            class FakeAOR:
+                def __init__(self, sgi_obj):
+                    self.sgi = sgi_obj
+                    self.full_name = annex_data.get('page22', {}).get('nom_complet', 'Client')
+            
+            fake_aor = FakeAOR(sgi)
+            
+            # Générer le PDF des annexes
+            annex_service = AnnexPDFService()
+            pdf_buffer = annex_service.generate_annex_pdf(fake_aor, annex_data)
+            
+            # Préparer le nom du fichier
+            client_name = annex_data.get('page22', {}).get('nom_complet', 'Client').replace(' ', '_')
+            filename = f"Annexes_{sgi.name.replace(' ', '_')}_{client_name}.pdf"
+            
+            # Retourner le PDF
+            response = FileResponse(
+                pdf_buffer,
+                content_type='application/pdf',
+                as_attachment=True,
+                filename=filename
+            )
+            return response
+            
+        except Exception as e:
+            logger.error(f"Erreur génération PDF annexes: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur génération PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
