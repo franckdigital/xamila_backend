@@ -1,7 +1,6 @@
 """
-NSIA FINANCE PDF Template with complete field mappings (same structure as GEK CAPITAL).
-Uses the NSIA PDF template but with identical field logic to GEK for consistency.
-All 95 annex fields are handled across pages 22, 23, and 26.
+NSIA FINANCE PDF Template with complete field mappings for all 95 annex fields.
+Identical structure to GEK CAPITAL but uses NSIA PDF template.
 """
 import os
 from typing import Dict, Any
@@ -13,7 +12,8 @@ from .base import BasePDFTemplate
 class NSIATemplate(BasePDFTemplate):
     """
     PDF Template for NSIA FINANCE contract.
-    Handles all 95 annex fields across pages 22, 23, and 26 (same as GEK CAPITAL).
+    Handles all 95 annex fields across pages 22, 23, and 26.
+    Identical structure to GEK CAPITAL.
     """
     
     def get_template_path(self) -> str:
@@ -27,7 +27,6 @@ class NSIATemplate(BasePDFTemplate):
     def fill_page(self, canvas_obj, page_index: int, context: Dict[str, Any]):
         """
         Fill specific pages with data for NSIA FINANCE template.
-        Uses same page structure as GEK CAPITAL for consistency.
         
         Args:
             canvas_obj: ReportLab canvas object
@@ -58,7 +57,7 @@ class NSIATemplate(BasePDFTemplate):
             self._fill_page_26_account_characteristics(canvas_obj, annex, aor)
     
     def _fill_page_1_cover(self, c, annex: Dict, aor):
-        """Fill page 1 (cover/summary) for NSIA FINANCE."""
+        """Fill page 1 (cover/summary)."""
         c.setFont("Helvetica-Bold", 11)
         
         # Client name
@@ -101,7 +100,7 @@ class NSIATemplate(BasePDFTemplate):
         self.draw_text(c, 120 * mm, 35 * mm, self.format_date(date))
     
     def _fill_page_2_initial_form(self, c, annex: Dict, aor):
-        """Fill page 2 (initial form) for NSIA FINANCE."""
+        """Fill page 2 (initial form)."""
         p22 = annex.get('page22', {})
         
         # Name fields
@@ -128,13 +127,14 @@ class NSIATemplate(BasePDFTemplate):
     
     def _fill_page_22_annex1(self, c, annex: Dict, aor):
         """
-        Fill page 22 (Annexe 1) for NSIA FINANCE - Complete identity form with ALL 55 fields.
+        Fill page 22 (Annexe 1) - Complete identity form with ALL 55 fields.
+        This is the most detailed page with personal/company information.
         """
         p22 = annex.get('page22', {})
         
         # === SECTION 1: PERSONNE PHYSIQUE (11 fields) ===
         if not self.safe_get(p22, 'is_company', 'false').lower() == 'true':
-            # Civilité
+            # Civilité (checkbox or text) - Position depends on template
             civility = self.safe_get(p22, 'civility', 'Monsieur')
             if civility == 'Monsieur':
                 self.draw_checkbox(c, 20 * mm, 260 * mm, True)
@@ -143,7 +143,7 @@ class NSIATemplate(BasePDFTemplate):
             elif civility == 'Mademoiselle':
                 self.draw_checkbox(c, 60 * mm, 260 * mm, True)
             
-            # Nom / Prénoms
+            # Nom / Nom de jeune fille / Prénoms
             parts = (getattr(aor, 'full_name', '') or '').split()
             nom = self.safe_get(p22, 'last_name') or (parts[-1] if parts else '')
             prenoms = self.safe_get(p22, 'first_names') or (' '.join(parts[:-1]) if len(parts) > 1 else '')
@@ -170,6 +170,7 @@ class NSIATemplate(BasePDFTemplate):
             id_number = self.safe_get(p22, 'id_number')
             id_valid = self.format_date(self.safe_get(p22, 'id_valid_until'))
             
+            # Type de pièce (checkboxes)
             if 'carte' in id_type.lower():
                 self.draw_checkbox(c, 20 * mm, 218 * mm, True)
             elif 'passeport' in id_type.lower():
@@ -216,7 +217,7 @@ class NSIATemplate(BasePDFTemplate):
         self.draw_text(c, 30 * mm, y_fiscal - 10 * mm, fiscal_city)
         self.draw_text(c, 30 * mm, 176 * mm, fiscal_country)
         
-        # Résidence fiscale
+        # Résidence fiscale (checkboxes)
         is_ivory = self.safe_get(p22, 'is_fiscal_resident_ivory', 'false').lower() == 'true'
         is_cedeao = self.safe_get(p22, 'is_cedeao_member', 'false').lower() == 'true'
         is_outside = self.safe_get(p22, 'is_outside_cedeao', 'false').lower() == 'true'
@@ -227,7 +228,7 @@ class NSIATemplate(BasePDFTemplate):
         
         # === SECTION 4: ADRESSE POSTALE (5 fields) ===
         postal_address = self.safe_get(p22, 'postal_address')
-        if postal_address:
+        if postal_address:  # Only if different from fiscal
             postal_door = self.safe_get(p22, 'postal_door_number')
             postal_code = self.safe_get(p22, 'postal_code')
             postal_city = self.safe_get(p22, 'postal_city')
@@ -242,6 +243,7 @@ class NSIATemplate(BasePDFTemplate):
         phone = self.safe_get(p22, 'phone') or getattr(aor, 'phone', '')
         home_phone = self.safe_get(p22, 'home_phone')
         email = self.safe_get(p22, 'email') or getattr(aor, 'email', '')
+        email_confirm = self.safe_get(p22, 'email_confirm')
         
         self.draw_text(c, 30 * mm, 128 * mm, phone)
         self.draw_text(c, 120 * mm, 128 * mm, home_phone)
@@ -293,7 +295,9 @@ class NSIATemplate(BasePDFTemplate):
         self.draw_checkbox(c, 20 * mm, 38 * mm, consent_docs)
     
     def _fill_page_23_communication(self, c, annex: Dict, aor):
-        """Fill page 23 - Communication and restrictions (2 fields) for NSIA FINANCE."""
+        """
+        Fill page 23 - Communication and restrictions (2 fields).
+        """
         p23 = annex.get('page23', {})
         p22 = annex.get('page22', {})
         
@@ -301,44 +305,46 @@ class NSIATemplate(BasePDFTemplate):
         consent_email = self.safe_get(p23, 'consent_email', 'true').lower() == 'true'
         self.draw_checkbox(c, 26 * mm, 60 * mm, consent_email)
         
-        # Email address
+        # Email address (use p23 email or fallback to p22/aor)
         email = self.safe_get(p23, 'email') or self.safe_get(p22, 'email') or getattr(aor, 'email', '')
         self.draw_text(c, 30 * mm, 56 * mm, email)
     
     def _fill_page_26_account_characteristics(self, c, annex: Dict, aor):
-        """Fill page 26 (Annexe 4) - Account characteristics and procuration (38 fields) for NSIA FINANCE."""
+        """
+        Fill page 26 (Annexe 4) - Account characteristics and procuration (38 fields).
+        """
         p26 = annex.get('page26', {})
-        p23 = annex.get('page23', {})  # Le frontend envoie les données dans page23
         
         # === SECTION 1: TYPE DE COMPTE (19 fields) ===
-        # Lire depuis page23 (frontend) avec fallback sur page26
-        account_individual = self.safe_get(p23, 'account_individual') or self.safe_get(p26, 'account_individual', 'true')
-        account_joint = self.safe_get(p23, 'account_joint') or self.safe_get(p26, 'account_joint', 'false')
-        account_indivision = self.safe_get(p23, 'account_indivision') or self.safe_get(p26, 'account_indivision', 'false')
         
-        self.draw_checkbox(c, 17 * mm, 262 * mm, str(account_individual).lower() == 'true')
-        self.draw_checkbox(c, 17 * mm, 255 * mm, str(account_joint).lower() == 'true')
-        self.draw_checkbox(c, 17 * mm, 248 * mm, str(account_indivision).lower() == 'true')
+        # Account type checkboxes
+        account_individual = self.safe_get(p26, 'account_individual', 'true').lower() == 'true'
+        account_joint = self.safe_get(p26, 'account_joint', 'false').lower() == 'true'
+        account_indivision = self.safe_get(p26, 'account_indivision', 'false').lower() == 'true'
         
-        # Compte joint (7 fields) - Lire depuis page23 avec fallback sur page26
-        if str(account_joint).lower() == 'true':
-            joint_a_name = self.safe_get(p23, 'joint_holder_a_name') or self.safe_get(p26, 'joint_holder_a_name')
-            joint_a_first = self.safe_get(p23, 'joint_holder_a_first_names') or self.safe_get(p26, 'joint_holder_a_first_names')
-            joint_a_birth = self.format_date(self.safe_get(p23, 'joint_holder_a_birth_date') or self.safe_get(p26, 'joint_holder_a_birth_date'))
-            joint_b_name = self.safe_get(p23, 'joint_holder_b_name') or self.safe_get(p26, 'joint_holder_b_name')
-            joint_b_first = self.safe_get(p23, 'joint_holder_b_first_names') or self.safe_get(p26, 'joint_holder_b_first_names')
-            joint_b_birth = self.format_date(self.safe_get(p23, 'joint_holder_b_birth_date') or self.safe_get(p26, 'joint_holder_b_birth_date'))
+        self.draw_checkbox(c, 17 * mm, 262 * mm, account_individual)
+        self.draw_checkbox(c, 17 * mm, 255 * mm, account_joint)
+        self.draw_checkbox(c, 17 * mm, 248 * mm, account_indivision)
+        
+        # Compte joint (7 fields)
+        if account_joint:
+            joint_a_name = self.safe_get(p26, 'joint_holder_a_name')
+            joint_a_first = self.safe_get(p26, 'joint_holder_a_first_names')
+            joint_a_birth = self.format_date(self.safe_get(p26, 'joint_holder_a_birth_date'))
+            joint_b_name = self.safe_get(p26, 'joint_holder_b_name')
+            joint_b_first = self.safe_get(p26, 'joint_holder_b_first_names')
+            joint_b_birth = self.format_date(self.safe_get(p26, 'joint_holder_b_birth_date'))
             
             y_joint = 250 * mm
             self.draw_text(c, 40 * mm, y_joint, f"A: {joint_a_name} {joint_a_first} ({joint_a_birth})")
             self.draw_text(c, 40 * mm, y_joint - 5 * mm, f"B: {joint_b_name} {joint_b_first} ({joint_b_birth})")
         
-        # Compte indivision (9 fields) - Lire depuis page23 avec fallback sur page26
-        if str(account_indivision).lower() == 'true':
+        # Compte indivision (9 fields)
+        if account_indivision:
             holders = []
             for letter in ['a', 'b', 'c', 'd']:
-                name = self.safe_get(p23, f'indivision_holder_{letter}_name') or self.safe_get(p26, f'indivision_holder_{letter}_name')
-                first = self.safe_get(p23, f'indivision_holder_{letter}_first_names') or self.safe_get(p26, f'indivision_holder_{letter}_first_names')
+                name = self.safe_get(p26, f'indivision_holder_{letter}_name')
+                first = self.safe_get(p26, f'indivision_holder_{letter}_first_names')
                 if name:
                     holders.append(f"{name} {first}")
             
@@ -347,12 +353,12 @@ class NSIATemplate(BasePDFTemplate):
                 self.draw_text(c, 40 * mm, y_indiv - (i * 5 * mm), f"{chr(65+i)}: {holder}")
         
         # === SECTION 2: PERSONNE DÉSIGNÉE (1 field) ===
-        designated_name = self.safe_get(p23, 'designated_person_name') or self.safe_get(p26, 'designated_operator_name') or getattr(aor, 'full_name', '')
+        designated_name = self.safe_get(p26, 'designated_operator_name') or getattr(aor, 'full_name', '')
         self.draw_text(c, 30 * mm, 205 * mm, designated_name)
         
         # === SECTION 3: SIGNATURE (2 fields) ===
-        place = self.safe_get(p23, 'place') or self.safe_get(p26, 'place') or getattr(aor, 'country_of_residence', '')
-        date = self.safe_get(p23, 'date') or self.safe_get(p26, 'date')
+        place = self.safe_get(p26, 'place') or getattr(aor, 'country_of_residence', '')
+        date = self.safe_get(p26, 'date')
         if not date:
             from django.utils import timezone
             date = timezone.now().strftime('%d/%m/%Y')
