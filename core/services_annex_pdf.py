@@ -105,15 +105,17 @@ class AnnexPDFService:
         y -= 20*mm
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30*mm, y, "LE(S) TITULAIRE(S)")
-        # SGI label dynamique: NSIA pour NSIA, sinon nom de la SGI ou libellé par défaut
-        sgi_label = "GEK CAPITAL"
+        # SGI label dynamique: utilise le nom de la SGI sélectionnée
+        sgi_label = "SGI"
         try:
             sgi = getattr(aor, "sgi", None)
             if sgi and getattr(sgi, "name", None):
                 name = sgi.name.strip()
                 upper = name.upper()
                 if "NSIA" in upper:
-                    sgi_label = "NSIA"
+                    sgi_label = "NSIA FINANCES"
+                elif "GEK" in upper:
+                    sgi_label = "GEK CAPITAL"
                 else:
                     sgi_label = name
         except Exception:
@@ -127,14 +129,14 @@ class AnnexPDFService:
         
         # Afficher les signatures si présentes (base64 -> image)
         sig_titulaire = p21.get('signature_titulaire')
-        sig_gek = p21.get('signature_gek')
+        sig_sgi = p21.get('signature_sgi') or p21.get('signature_gek')  # Compatibilité
         
         if sig_titulaire:
             y -= 30*mm
             c.drawString(30*mm, y, "[Signature titulaire présente]")
         
-        if sig_gek:
-            c.drawString(120*mm, y, "[Signature GEK présente]")
+        if sig_sgi:
+            c.drawString(120*mm, y, f"[Signature {sgi_label} présente]")
         
         c.showPage()
         c.save()
