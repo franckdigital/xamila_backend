@@ -75,7 +75,19 @@ class AnnexPDFService:
         
         # Titre
         c.setFont("Helvetica-Bold", 14)
-        c.drawString(30*mm, height - 30*mm, "PAGE 21 - TEXTE LÉGAL ET SIGNATURES")
+        c.drawString(30*mm, height - 30*mm, "Annexe 1 : Formulaire d'ouverture de compte-titres")
+        
+        # Note importante en haut
+        y = height - 40*mm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(30*mm, y, "IMPORTANT : En cas de pluralité de titulaires")
+        y -= 4*mm
+        c.setFont("Helvetica", 8)
+        c.drawString(30*mm, y, "(compte joint de titres, compte en indivision ou compte usufrui nue-propriété),")
+        y -= 4*mm
+        c.drawString(30*mm, y, "merci de photocopier cette page en autant d'exemplaires qu'il y a de co-titulaires du compte,")
+        y -= 4*mm
+        c.drawString(30*mm, y, "de la compléter et de la joindre à votre envoi (un exemplaire par co-titulaire accompagné des pièces justificatives).")
         
         # Texte légal (simplifié pour l'exemple)
         c.setFont("Helvetica", 9)
@@ -104,7 +116,7 @@ class AnnexPDFService:
         # Zones de signature
         y -= 20*mm
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "LE(S) TITULAIRE(S)")
+        c.drawString(30*mm, y, "LE(S) TITULAIRE(S) (1)")
         # SGI label dynamique: utilise le nom de la SGI sélectionnée
         sgi_label = "SGI"
         try:
@@ -124,8 +136,12 @@ class AnnexPDFService:
         
         y -= 5*mm
         c.setFont("Helvetica", 8)
-        c.drawString(30*mm, y, 'Signature précédée de "Lu et approuvé"')
-        c.drawString(120*mm, y, 'Signature précédée de "Lu et approuvé"')
+        c.drawString(30*mm, y, '(1) Signature précédée de la mention manuscrite "Lu et approuvé"')
+        
+        # Dessiner des rectangles pour les zones de signature
+        y -= 25*mm
+        c.rect(30*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
+        c.rect(120*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
         
         # Afficher les signatures si présentes (base64 -> image)
         sig_titulaire = p21.get('signature_titulaire')
@@ -155,7 +171,7 @@ class AnnexPDFService:
         c.setFont("Helvetica-Bold", 14)
         c.drawString(30*mm, height - 30*mm, "PAGE 22 - FORMULAIRE D'OUVERTURE")
         
-        y = height - 50*mm
+        y = height - 70*mm
         c.setFont("Helvetica", 10)
         
         # Numéro de compte
@@ -283,19 +299,24 @@ class AnnexPDFService:
         place = p23.get('place', 'Abidjan')
         date = p23.get('date', '')
         c.setFont("Helvetica", 10)
-        c.drawString(30*mm, y, f"Fait à: {place}")
-        c.drawString(100*mm, y, f"Le: {date}")
-        y -= 10*mm
+        c.drawString(30*mm, y, f"Fait à: {place}, le {date}, en deux exemplaires originaux.")
+        y -= 15*mm
         
-        # Signature
+        # Zone de signature
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30*mm, y, "Signature du titulaire")
         y -= 5*mm
+        c.setFont("Helvetica", 8)
+        c.drawString(30*mm, y, '(précédée de "Lu et approuvé")')
+        
+        # Rectangle pour la signature
+        y -= 25*mm
+        c.rect(30*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
         
         signature = p23.get('signature')
         if signature:
             c.setFont("Helvetica", 8)
-            c.drawString(30*mm, y, "[Signature présente]")
+            c.drawString(35*mm, y + 10*mm, "[Signature présente]")
         
         c.showPage()
         c.save()

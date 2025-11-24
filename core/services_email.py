@@ -110,6 +110,9 @@ class ContractEmailService:
         # Corps de l'email en HTML
         html_message = f"""
         <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #1976d2;">Demande d'ouverture de compte-titres</h2>
@@ -212,6 +215,9 @@ class ContractEmailService:
         
         html_message = f"""
         <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #00a651;">Nouvelle demande d'ouverture de compte</h2>
@@ -300,6 +306,9 @@ class ContractEmailService:
         
         html_message = f"""
         <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #9c27b0;">📋 Nouvelle demande d'ouverture de compte</h2>
