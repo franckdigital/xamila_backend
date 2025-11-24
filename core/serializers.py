@@ -277,6 +277,9 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
                 attrs['annex_data'] = {}
         return attrs
     def create(self, validated_data):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         user = self.context['request'].user
         sgi_id = validated_data.pop('sgi_id', None)
         sgi = None
@@ -285,15 +288,25 @@ class AccountOpeningRequestCreateSerializer(serializers.ModelSerializer):
                 sgi = SGI.objects.get(id=sgi_id)
             except SGI.DoesNotExist:
                 raise serializers.ValidationError({'sgi_id': 'SGI introuvable'})
+        
+        # Log les fichiers reçus
+        has_photo = 'photo' in validated_data and validated_data.get('photo')
+        has_id_scan = 'id_card_scan' in validated_data and validated_data.get('id_card_scan')
+        logger.info(f"Création AccountOpeningRequest - Photo: {has_photo}, CNI: {has_id_scan}")
+        
         # Handle potential storage permission issues when saving files
         try:
             instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
+            logger.info(f"✅ AccountOpeningRequest créé avec succès (ID: {instance.id})")
             return instance
-        except (OSError, PermissionError):
+        except (OSError, PermissionError) as e:
             # Retry without file fields
+            logger.warning(f"⚠️ Erreur de permissions lors de la sauvegarde des fichiers: {e}")
+            logger.warning("Nouvelle tentative sans les fichiers photo et CNI...")
             validated_data.pop('photo', None)
             validated_data.pop('id_card_scan', None)
             instance = AccountOpeningRequest.objects.create(customer=user, sgi=sgi, **validated_data)
+            logger.warning(f"⚠️ AccountOpeningRequest créé SANS fichiers (ID: {instance.id})")
             return instance
 
 
