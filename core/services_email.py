@@ -18,7 +18,7 @@ class ContractEmailService:
     
     def __init__(self):
         self.from_email = settings.DEFAULT_FROM_EMAIL
-        self.xamila_team_email = getattr(settings, 'XAMILA_TEAM_EMAIL', 'team@xamila.com')
+        self.xamila_team_email = getattr(settings, 'XAMILA_TEAM_EMAIL', 'xamila.developer@gmail.com')
     
     def send_contract_emails(
         self,
@@ -382,7 +382,7 @@ class ContractEmailService:
         email.send()
     
     def _send_admin_email(self, aor, to_email: str, contract_pdf: bytes, annexes_pdf: bytes):
-        ""Envoie l'email à un administrateur""
+        ""Envoie l'email ï¿½ un administrateur""
         subject = f"[ADMIN] Nouvelle demande - {aor.full_name} - {aor.sgi.name if aor.sgi else 'SGI'}"
         
         html_message = f""
@@ -394,28 +394,28 @@ class ContractEmailService:
                 <p><strong>Client :</strong> {aor.full_name}</p>
                 <p><strong>SGI :</strong> {aor.sgi.name if aor.sgi else 'N/A'}</p>
                 <p><strong>Email :</strong> {aor.email}</p>
-                <p><strong>Téléphone :</strong> {aor.phone}</p>
+                <p><strong>Tï¿½lï¿½phone :</strong> {aor.phone}</p>
                 
                 <p style="background-color: #ffebee; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
                     <strong>ID Demande :</strong> {aor.id}<br>
                     <strong>Profil :</strong> {aor.investor_profile}<br>
                     <strong>Pays :</strong> {aor.country_of_residence}<br>
-                    <strong>Nationalité :</strong> {aor.nationality}
+                    <strong>Nationalitï¿½ :</strong> {aor.nationality}
                 </p>
                 
-                <p><strong>Préférences :</strong></p>
+                <p><strong>Prï¿½fï¿½rences :</strong></p>
                 <ul>
                     <li>Ouverture digitale : {'Oui' if aor.wants_digital_opening else 'Non'}</li>
                     <li>Ouverture en personne : {'Oui' if aor.wants_in_person_opening else 'Non'}</li>
                     <li>Xamila+ : {'Oui' if aor.wants_xamila_plus else 'Non'}</li>
                 </ul>
                 
-                <p><strong>Documents en pièces jointes :</strong></p>
+                <p><strong>Documents en piï¿½ces jointes :</strong></p>
                 <ul>
                     <li>Contrat complet</li>
-                    <li>Annexes pré-remplies</li>
-                    <li>Photo d'identité</li>
-                    <li>Pièce d'identité (CNI/Passeport)</li>
+                    <li>Annexes prï¿½-remplies</li>
+                    <li>Photo d'identitï¿½</li>
+                    <li>Piï¿½ce d'identitï¿½ (CNI/Passeport)</li>
                 </ul>
                 
                 <p><strong>Administration Xamila</strong></p>
