@@ -81,14 +81,53 @@ class AnnexPDFService:
         p21 = annex_data.get('page21', {})
         
         # Pas de titre - continuation du contrat
-        y = height - 30*mm
+        y = height - 20*mm
+        
+        # Texte sur le règlement des litiges (avant Article 30)
+        c.setFont("Helvetica", 8)
+        
+        litige_text = [
+            "En cas de litige relatif notamment, à la validité, l'interprétation ou l'exécution de la Convention, les Parties   conviennent de suivre",
+            "la procédure prévue par l'instruction n°50/2016 portant procédure de traitement des plaintes et/ou réclamations sur le marché",
+            "financier régional de l'UMOA.",
+            "",
+            "Conformément à ladite instruction, le traitement des différends entre la SGI et ses Clients se déroulera ainsi qu'il suit :",
+            "",
+            "Le Titulaire adressera sa plainte ou sa réclamation au service   commercial par tout moyen écrit permettant de justifier de sa date",
+            "(courrier, courriel etc.). Les plaintes doivent porter sur des faits survenus dans un délai maximum d'un an.   Ledit département",
+            "accusera réception de la plainte et la mettra immédiatement en traitement avec les organes internes compétents de la SGI.   Le",
+            "Titulaire sera tenu informé par courriel du déroulement du traitement de sa plainte dans les cinq (5) jours ouvrables à compter de",
+            "la date de la saisine. En tout état de cause, la SGI répondra aux demandes d'informations du Titulaire   sur le déroulement du",
+            "traitement de sa plainte. Afin de faciliter les échanges, Le Titulaire consent à communiquer une adresse email lors de la transmission",
+            "de sa réclamation ou plainte.",
+            "",
+            "La plainte ou réclamation sera traitée dans un délai maximum de dix (10) jours à compter de sa réception par le service susvisé. A",
+            "l'expiration du délai sus indiqué, la SGI adressera, au Titulaire, un courrier ou un courriel, si Le Titulaire a choisi ce mode de",
+            "communication. En cas de rejet ou refus de faire droit en totalité ou partiellement à la réclamation, la SGI indiquera au Titulaire",
+            "qu'il a le droit de saisir l'association professionnelle des sociétés de gestion et d'intermédiation (APSGI).",
+            "",
+            "Si le litige persiste à l'issue de l'intervention de l'association professionnelle des sociétés de gestion et d'intermédiation (APSGI), le",
+            "traitement du litige sera porté devant l'Autorité des marchés (AMF-UMOA) qui interviendra en qualité de médiateur ou de",
+            "conciliateur, conformément à l'instruction n°50/2016.",
+            "",
+            "La partie insatisfaite à l'issue du traitement du litige par l'Autorité des marchés (AMF-UMOA) pourra saisir le tribunal compétent.",
+            "",
+            "Cette clause de règlement des litiges sera interprétée et appliquée conformément à l'instruction n°50/2016 et à toute autre",
+            "réglementation pertinente en vigueur à la date de signature du contrat.",
+            "",
+        ]
+        
+        for line in litige_text:
+            c.drawString(30*mm, y, line)
+            y -= 4*mm
         
         # Article 30 : Élection de domicile
+        y -= 2*mm
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30*mm, y, "Article 30 : Élection de domicile")
         y -= 7*mm
         
-        c.setFont("Helvetica", 9)
+        c.setFont("Helvetica", 8)
         legal_text_art30 = [
             "Pour l'exécution de la Convention, les Parties font élection de domicile en leur siège social et domicile respectifs, tels qu'indiqués",
             "en tête des présentes.",
@@ -99,8 +138,10 @@ class AnnexPDFService:
             "Sauf stipulation contraire, toute notification ou communication à laquelle pourrait donner lieu la Convention devra être adressée",
             "par lettre recommandée avec accusé de réception, remise en main propre contre décharge ou par huissier. Chaque notification ou",
             "communication aura effet dès sa réception. Les notifications par lettre recommandée seront considérées avoir été reçues à la date",
-            "de première présentation de la lettre recommandée, si l'avis de réception, si l'avis de réception a été signé ou si la lettre a été",
-            "retournée avec quelque mention que ce soit, telles que 'inconnu à l'adresse', 'parti sans laisser d'adresse', 'non retiré', 'locaux fermés', etc.",
+            "de première présentation de la lettre recommandée ou du courrier exprès telle qu'indiquée sur l'avis de réception. Les Parties",
+            "conviennent que toute notification adressée à l'une des Parties à son adresse telle que prévue ci-dessus est réputée valable, régulière",
+            "et opérante quand bien même le pli correspondant est retourné à l'autre Partie avec quelque mention que ce soit, telles que 'inconnu",
+            "à l'adresse', 'parti sans laisser d'adresse', 'non retiré', 'locaux fermés', etc.",
             "",
         ]
         
@@ -109,12 +150,12 @@ class AnnexPDFService:
             y -= 5*mm
         
         # Article 34 : Langue
-        y -= 3*mm
+        y -= 2*mm
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30*mm, y, "Article 34 : Langue")
         y -= 7*mm
         
-        c.setFont("Helvetica", 9)
+        c.setFont("Helvetica", 8)
         legal_text_art34 = [
             "Le texte de la présente Convention est en français et, s'il est traduit dans une autre langue, seule la version française prévaudra.",
             "",
@@ -122,14 +163,14 @@ class AnnexPDFService:
         
         for line in legal_text_art34:
             c.drawString(30*mm, y, line)
-            y -= 5*mm
+            y -= 4*mm
         
         # Fait à / Le
-        y -= 5*mm
-        c.setFont("Helvetica", 10)
+        y -= 8*mm
+        c.setFont("Helvetica", 9)
         place = p21.get('place', 'Abidjan')
-        date = p21.get('date', '')
-        c.drawString(30*mm, y, f"Fait en deux exemplaires à {place}, le {date}")
+        date = p21.get('date', '.............................')
+        c.drawString(width/2 - 50*mm, y, f"Fait en deux exemplaires à {place}, le {date}")
         
         # Zones de signature
         y -= 20*mm
