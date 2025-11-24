@@ -5,6 +5,7 @@ Le contrat principal reste statique.
 """
 from io import BytesIO
 import logging
+import base64
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -12,9 +13,11 @@ from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
 from pypdf import PdfWriter
 from django.conf import settings
 import os
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +36,37 @@ class AnnexPDFService:
         self.blue_border = HexColor('#3B82F6')  # Bleu pour les bordures
         self.gray_bg = HexColor('#F3F4F6')      # Gris clair pour les fonds
         self.black_text = colors.black
+    
+    def _base64_to_image(self, base64_string):
+        """
+        Convertit une chaîne base64 en objet ImageReader utilisable par ReportLab.
+        
+        Args:
+            base64_string: Chaîne base64 (avec ou sans préfixe data:image/png;base64,)
+        
+        Returns:
+            ImageReader object ou None si erreur
+        """
+        try:
+            # Supprimer le préfixe data:image/png;base64, si présent
+            if ',' in base64_string:
+                base64_string = base64_string.split(',', 1)[1]
+            
+            # Décoder le base64
+            image_data = base64.b64decode(base64_string)
+            
+            # Créer un objet Image PIL
+            image = Image.open(BytesIO(image_data))
+            
+            # Convertir en ImageReader pour ReportLab
+            image_buffer = BytesIO()
+            image.save(image_buffer, format='PNG')
+            image_buffer.seek(0)
+            
+            return ImageReader(image_buffer)
+        except Exception as e:
+            logger.error(f"Erreur conversion base64 vers image: {e}")
+            return None
     
     def generate_annexes_pdf(self, aor, annex_data: dict) -> BytesIO:
         """
@@ -199,6 +233,7 @@ class AnnexPDFService:
         
         # Dessiner des rectangles pour les zones de signature
         y -= 25*mm
+        sig_y = y  # Sauvegarder la position Y pour les signatures
         c.rect(30*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
         c.rect(120*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
         
@@ -206,12 +241,37 @@ class AnnexPDFService:
         sig_titulaire = p21.get('signature_titulaire')
         sig_sgi = p21.get('signature_sgi') or p21.get('signature_gek')  # Compatibilité
         
+        # Afficher la signature du titulaire
         if sig_titulaire:
-            y -= 30*mm
-            c.drawString(30*mm, y, "[Signature titulaire présente]")
+            try:
+                img = self._base64_to_image(sig_titulaire)
+                if img:
+                    # Dessiner l'image dans le rectangle (ajuster la taille)
+                    c.drawImage(img, 32*mm, sig_y + 2*mm, width=56*mm, height=16*mm, 
+                               preserveAspectRatio=True, mask='auto')
+                else:
+                    c.setFont("Helvetica", 8)
+                    c.drawString(35*mm, sig_y + 8*mm, "[Signature présente]")
+            except Exception as e:
+                logger.error(f"Erreur affichage signature titulaire: {e}")
+                c.setFont("Helvetica", 8)
+                c.drawString(35*mm, sig_y + 8*mm, "[Erreur signature]")
         
+        # Afficher la signature SGI
         if sig_sgi:
-            c.drawString(120*mm, y, f"[Signature {sgi_label} présente]")
+            try:
+                img = self._base64_to_image(sig_sgi)
+                if img:
+                    # Dessiner l'image dans le rectangle (ajuster la taille)
+                    c.drawImage(img, 122*mm, sig_y + 2*mm, width=56*mm, height=16*mm, 
+                               preserveAspectRatio=True, mask='auto')
+                else:
+                    c.setFont("Helvetica", 8)
+                    c.drawString(125*mm, sig_y + 8*mm, f"[Signature présente]")
+            except Exception as e:
+                logger.error(f"Erreur affichage signature SGI: {e}")
+                c.setFont("Helvetica", 8)
+                c.drawString(125*mm, sig_y + 8*mm, "[Erreur signature]")
         
         c.showPage()
         c.save()
@@ -601,12 +661,24 @@ class AnnexPDFService:
         
         # Rectangle pour la signature
         y -= 25*mm
+        sig_y = y  # Sauvegarder la position Y
         c.rect(30*mm, y, 60*mm, 20*mm, stroke=1, fill=0)
         
         signature = p23.get('signature')
         if signature:
-            c.setFont("Helvetica", 8)
-            c.drawString(35*mm, y + 10*mm, "[Signature présente]")
+            try:
+                img = self._base64_to_image(signature)
+                if img:
+                    # Dessiner l'image dans le rectangle
+                    c.drawImage(img, 32*mm, sig_y + 2*mm, width=56*mm, height=16*mm, 
+                               preserveAspectRatio=True, mask='auto')
+                else:
+                    c.setFont("Helvetica", 8)
+                    c.drawString(35*mm, sig_y + 10*mm, "[Signature présente]")
+            except Exception as e:
+                logger.error(f"Erreur affichage signature page 23: {e}")
+                c.setFont("Helvetica", 8)
+                c.drawString(35*mm, sig_y + 10*mm, "[Erreur signature]")
         
         c.showPage()
         c.save()
@@ -746,8 +818,43 @@ class AnnexPDFService:
             # Rectangles pour signatures
             c.setStrokeColor(self.black_text)
             c.setLineWidth(1)
-            c.rect(30*mm, y - 20*mm, 50*mm, 25*mm, fill=0, stroke=1)
-            c.rect(120*mm, y - 20*mm, 50*mm, 25*mm, fill=0, stroke=1)
+            sig_y = y - 20*mm  # Position Y pour les signatures
+            c.rect(30*mm, sig_y, 50*mm, 25*mm, fill=0, stroke=1)
+            c.rect(120*mm, sig_y, 50*mm, 25*mm, fill=0, stroke=1)
+            
+            # Afficher les signatures si présentes
+            sig_mandant = p26.get('signature_mandant')
+            sig_mandataire = p26.get('signature_mandataire')
+            
+            # Signature du mandant
+            if sig_mandant:
+                try:
+                    img = self._base64_to_image(sig_mandant)
+                    if img:
+                        c.drawImage(img, 32*mm, sig_y + 2*mm, width=46*mm, height=21*mm, 
+                                   preserveAspectRatio=True, mask='auto')
+                    else:
+                        c.setFont("Helvetica", 8)
+                        c.drawString(35*mm, sig_y + 12*mm, "[Signature présente]")
+                except Exception as e:
+                    logger.error(f"Erreur affichage signature mandant: {e}")
+                    c.setFont("Helvetica", 8)
+                    c.drawString(35*mm, sig_y + 12*mm, "[Erreur signature]")
+            
+            # Signature du mandataire
+            if sig_mandataire:
+                try:
+                    img = self._base64_to_image(sig_mandataire)
+                    if img:
+                        c.drawImage(img, 122*mm, sig_y + 2*mm, width=46*mm, height=21*mm, 
+                                   preserveAspectRatio=True, mask='auto')
+                    else:
+                        c.setFont("Helvetica", 8)
+                        c.drawString(125*mm, sig_y + 12*mm, "[Signature présente]")
+                except Exception as e:
+                    logger.error(f"Erreur affichage signature mandataire: {e}")
+                    c.setFont("Helvetica", 8)
+                    c.drawString(125*mm, sig_y + 12*mm, "[Erreur signature]")
         
         c.showPage()
         c.save()
