@@ -378,47 +378,58 @@ class AnnexPDFService:
         # Ajouter la photo si disponible
         if aor and hasattr(aor, 'photo') and aor.photo:
             try:
-                # Charger la photo
-                aor.photo.seek(0)
-                photo_img = Image.open(aor.photo)
+                logger.info(f"Tentative d'ajout de la photo: {aor.photo.name if hasattr(aor.photo, 'name') else 'photo sans nom'}")
                 
-                # Calculer les dimensions pour ajuster dans le cadre (30mm x 40mm)
-                photo_width_mm = 28  # Légère marge
-                photo_height_mm = 38  # Légère marge
-                
-                # Convertir en points ReportLab
-                photo_width_pt = photo_width_mm * mm
-                photo_height_pt = photo_height_mm * mm
-                
-                # Calculer le ratio pour maintenir les proportions
-                img_width, img_height = photo_img.size
-                img_ratio = img_width / img_height
-                box_ratio = photo_width_pt / photo_height_pt
-                
-                if img_ratio > box_ratio:
-                    # Image plus large, ajuster sur la largeur
-                    final_width = photo_width_pt
-                    final_height = photo_width_pt / img_ratio
+                # Vérifier si le fichier existe et est accessible
+                if hasattr(aor.photo, 'path') and not os.path.exists(aor.photo.path):
+                    logger.warning(f"Fichier photo introuvable: {aor.photo.path}")
                 else:
-                    # Image plus haute, ajuster sur la hauteur
-                    final_height = photo_height_pt
-                    final_width = photo_height_pt * img_ratio
-                
-                # Centrer la photo dans le cadre
-                photo_x = photo_box_x + (30*mm - final_width) / 2
-                photo_y = photo_box_y - 35*mm + (40*mm - final_height) / 2
-                
-                # Créer un ImageReader depuis PIL Image
-                aor.photo.seek(0)
-                photo_reader = ImageReader(aor.photo)
-                
-                # Dessiner la photo
-                c.drawImage(photo_reader, photo_x, photo_y, width=final_width, height=final_height, preserveAspectRatio=True)
-                
-                logger.info("Photo ajoutée sur l'annexe page 22")
+                    # Charger la photo
+                    aor.photo.seek(0)
+                    photo_img = Image.open(aor.photo)
+                    logger.info(f"Photo chargée: {photo_img.size[0]}x{photo_img.size[1]} pixels, format: {photo_img.format}")
+                    
+                    # Calculer les dimensions pour ajuster dans le cadre (30mm x 40mm)
+                    photo_width_mm = 28  # Légère marge
+                    photo_height_mm = 38  # Légère marge
+                    
+                    # Convertir en points ReportLab
+                    photo_width_pt = photo_width_mm * mm
+                    photo_height_pt = photo_height_mm * mm
+                    
+                    # Calculer le ratio pour maintenir les proportions
+                    img_width, img_height = photo_img.size
+                    img_ratio = img_width / img_height
+                    box_ratio = photo_width_pt / photo_height_pt
+                    
+                    if img_ratio > box_ratio:
+                        # Image plus large, ajuster sur la largeur
+                        final_width = photo_width_pt
+                        final_height = photo_width_pt / img_ratio
+                    else:
+                        # Image plus haute, ajuster sur la hauteur
+                        final_height = photo_height_pt
+                        final_width = photo_height_pt * img_ratio
+                    
+                    logger.info(f"Dimensions finales: {final_width}pt x {final_height}pt")
+                    
+                    # Centrer la photo dans le cadre
+                    photo_x = photo_box_x + (30*mm - final_width) / 2
+                    photo_y = photo_box_y - 35*mm + (40*mm - final_height) / 2
+                    
+                    # Créer un ImageReader depuis PIL Image
+                    aor.photo.seek(0)
+                    photo_reader = ImageReader(aor.photo)
+                    
+                    # Dessiner la photo
+                    c.drawImage(photo_reader, photo_x, photo_y, width=final_width, height=final_height, preserveAspectRatio=True)
+                    
+                    logger.info(f"✅ Photo ajoutée sur l'annexe page 22 à la position ({photo_x}, {photo_y})")
             except Exception as e:
-                logger.warning(f"Impossible d'ajouter la photo sur page 22: {e}")
+                logger.error(f"❌ Erreur lors de l'ajout de la photo sur page 22: {e}", exc_info=True)
                 # Continuer sans la photo - le cadre vide sera visible
+        else:
+            logger.info("Aucune photo disponible pour la page 22")
         
         c.setFont("Helvetica", 8)
         # Civilité
