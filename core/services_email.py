@@ -391,47 +391,50 @@ class ContractEmailService:
         email.send()
     
     def _send_admin_email(self, aor, to_email: str, contract_pdf: bytes, annexes_pdf: bytes):
-        ""Envoie l'email � un administrateur""
+        """Envoie l'email à un administrateur"""
         subject = f"[ADMIN] Nouvelle demande - {aor.full_name} - {aor.sgi.name if aor.sgi else 'SGI'}"
         
-        html_message = f""
+        html_message = f"""
         <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #d32f2f;">?? Nouvelle demande d'ouverture de compte (ADMIN)</h2>
+                <h2 style="color: #d32f2f;">🔴 Nouvelle demande d'ouverture de compte (ADMIN)</h2>
                 
                 <p><strong>Client :</strong> {aor.full_name}</p>
                 <p><strong>SGI :</strong> {aor.sgi.name if aor.sgi else 'N/A'}</p>
                 <p><strong>Email :</strong> {aor.email}</p>
-                <p><strong>T�l�phone :</strong> {aor.phone}</p>
+                <p><strong>Téléphone :</strong> {aor.phone}</p>
                 
                 <p style="background-color: #ffebee; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
                     <strong>ID Demande :</strong> {aor.id}<br>
                     <strong>Profil :</strong> {aor.investor_profile}<br>
                     <strong>Pays :</strong> {aor.country_of_residence}<br>
-                    <strong>Nationalit� :</strong> {aor.nationality}
+                    <strong>Nationalité :</strong> {aor.nationality}
                 </p>
                 
-                <p><strong>Pr�f�rences :</strong></p>
+                <p><strong>Préférences :</strong></p>
                 <ul>
                     <li>Ouverture digitale : {'Oui' if aor.wants_digital_opening else 'Non'}</li>
                     <li>Ouverture en personne : {'Oui' if aor.wants_in_person_opening else 'Non'}</li>
                     <li>Xamila+ : {'Oui' if aor.wants_xamila_plus else 'Non'}</li>
                 </ul>
                 
-                <p><strong>Documents en pi�ces jointes :</strong></p>
+                <p><strong>Documents en pièces jointes :</strong></p>
                 <ul>
                     <li>Contrat complet</li>
-                    <li>Annexes pr�-remplies</li>
-                    <li>Photo d'identit�</li>
-                    <li>Pi�ce d'identit� (CNI/Passeport)</li>
+                    <li>Annexes pré-remplies</li>
+                    <li>Photo d'identité</li>
+                    <li>Pièce d'identité (CNI/Passeport)</li>
                 </ul>
                 
                 <p><strong>Administration Xamila</strong></p>
             </div>
         </body>
         </html>
-        ""
+        """
         
         email = EmailMessage(
             subject=subject,
