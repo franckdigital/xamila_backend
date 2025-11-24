@@ -37,6 +37,35 @@ class AnnexPDFService:
         self.gray_bg = HexColor('#F3F4F6')      # Gris clair pour les fonds
         self.black_text = colors.black
     
+    def _format_date(self, date_string):
+        """
+        Convertit une date du format YYYY-MM-DD ou ISO en format jj/mm/aaaa.
+        
+        Args:
+            date_string: Date au format YYYY-MM-DD, ISO ou déjà formatée
+        
+        Returns:
+            Date au format jj/mm/aaaa
+        """
+        if not date_string or date_string == '.............................':
+            return '.............................'
+        
+        try:
+            from datetime import datetime
+            # Essayer différents formats
+            for fmt in ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                try:
+                    dt = datetime.strptime(date_string.split('+')[0].split('Z')[0], fmt)
+                    return dt.strftime('%d/%m/%Y')
+                except ValueError:
+                    continue
+            
+            # Si déjà au bon format ou format inconnu, retourner tel quel
+            return date_string
+        except Exception as e:
+            logger.warning(f"Erreur formatage date {date_string}: {e}")
+            return date_string
+    
     def _base64_to_image(self, base64_string):
         """
         Convertit une chaîne base64 en objet ImageReader utilisable par ReportLab.
@@ -203,7 +232,7 @@ class AnnexPDFService:
         y -= 8*mm
         c.setFont("Helvetica", 9)
         place = p21.get('place', 'Abidjan')
-        date = p21.get('date', '.............................')
+        date = self._format_date(p21.get('date', '.............................'))
         c.drawString(width/2 - 50*mm, y, f"Fait en deux exemplaires à {place}, le {date}")
         
         # Zones de signature
@@ -342,6 +371,50 @@ class AnnexPDFService:
         photo_box_y = y
         c.rect(photo_box_x, photo_box_y - 35*mm, 30*mm, 40*mm, fill=0, stroke=1)
         
+        # Ajouter la photo si disponible
+        if aor and aor.photo:
+            try:
+                # Charger la photo
+                aor.photo.seek(0)
+                photo_img = Image.open(aor.photo)
+                
+                # Calculer les dimensions pour ajuster dans le cadre (30mm x 40mm)
+                photo_width_mm = 28  # Légère marge
+                photo_height_mm = 38  # Légère marge
+                
+                # Convertir en points ReportLab
+                photo_width_pt = photo_width_mm * mm
+                photo_height_pt = photo_height_mm * mm
+                
+                # Calculer le ratio pour maintenir les proportions
+                img_width, img_height = photo_img.size
+                img_ratio = img_width / img_height
+                box_ratio = photo_width_pt / photo_height_pt
+                
+                if img_ratio > box_ratio:
+                    # Image plus large, ajuster sur la largeur
+                    final_width = photo_width_pt
+                    final_height = photo_width_pt / img_ratio
+                else:
+                    # Image plus haute, ajuster sur la hauteur
+                    final_height = photo_height_pt
+                    final_width = photo_height_pt * img_ratio
+                
+                # Centrer la photo dans le cadre
+                photo_x = photo_box_x + (30*mm - final_width) / 2
+                photo_y = photo_box_y - 35*mm + (40*mm - final_height) / 2
+                
+                # Créer un ImageReader depuis PIL Image
+                aor.photo.seek(0)
+                photo_reader = ImageReader(aor.photo)
+                
+                # Dessiner la photo
+                c.drawImage(photo_reader, photo_x, photo_y, width=final_width, height=final_height, preserveAspectRatio=True)
+                
+                logger.info("Photo ajoutée sur l'annexe page 22")
+            except Exception as e:
+                logger.warning(f"Impossible d'ajouter la photo sur page 22: {e}")
+        
         c.setFont("Helvetica", 8)
         # Civilité
         civility = p22.get('civility', 'Monsieur')
@@ -364,7 +437,7 @@ class AnnexPDFService:
         y -= 5*mm
         
         # Date et lieu de naissance
-        birth_date = p22.get('birth_date', '.............................')
+        birth_date = self._format_date(p22.get('birth_date', '.............................'))
         birth_place = p22.get('birth_place', '.................................................................................................................................................................')
         c.drawString(22*mm, y, f"Date de naissance (jj/mm/aaaa) : {birth_date}    Lieu de naissance : {birth_place}")
         y -= 5*mm
@@ -377,7 +450,7 @@ class AnnexPDFService:
         # Type de pièce d'identité
         id_type = p22.get('id_type', '.............................')
         id_number = p22.get('id_number', '.............................')
-        id_validity = p22.get('id_validity', '.................................')
+        id_validity = self._format_date(p22.get('id_validity', '.................................'))
         c.drawString(22*mm, y, f"Type de pièce d'identité : {id_type}  Numéro : {id_number}  ...date de validité : {id_validity}")
         y -= 8*mm
         
@@ -419,7 +492,7 @@ class AnnexPDFService:
         y -= 5*mm
         
         # Date et lieu de naissance représentant
-        rep_birth_date = p22.get('rep_birth_date', '.............................')
+        rep_birth_date = self._format_date(p22.get('rep_birth_date', '.............................'))
         rep_birth_place = p22.get('rep_birth_place', '.................................................................................................................................................................')
         c.drawString(22*mm, y, f"Date de naissance (jj/mm/aaaa) : {rep_birth_date}    Lieu de naissance : {rep_birth_place}")
         y -= 5*mm
@@ -427,7 +500,7 @@ class AnnexPDFService:
         # Pièce d'identité représentant
         rep_id_type = p22.get('rep_id_type', '.............................')
         rep_id_number = p22.get('rep_id_number', '.............................')
-        rep_id_validity = p22.get('rep_id_validity', '.................................')
+        rep_id_validity = self._format_date(p22.get('rep_id_validity', '.................................'))
         c.drawString(22*mm, y, f"Titulaire de la pièce d'identité : {rep_id_type}  N° : {rep_id_number}  Valide jusqu'au : {rep_id_validity}")
         y -= 5*mm
         
@@ -596,13 +669,13 @@ class AnnexPDFService:
         c.setFont("Helvetica", 8)
         titulaire_a_nom = p23.get('titulaire_a_nom', '.............................')
         titulaire_a_prenom = p23.get('titulaire_a_prenom', '.............................')
-        titulaire_a_birth = p23.get('titulaire_a_birth', '.............................')
+        titulaire_a_birth = self._format_date(p23.get('titulaire_a_birth', '.............................'))
         c.drawString(30*mm, y, f"Titulaire A : Nom : {titulaire_a_nom}    Prénoms : {titulaire_a_prenom}    Date de naissance : {titulaire_a_birth}")
         y -= 5*mm
         
         titulaire_b_nom = p23.get('titulaire_b_nom', '.............................')
         titulaire_b_prenom = p23.get('titulaire_b_prenom', '.............................')
-        titulaire_b_birth = p23.get('titulaire_b_birth', '.............................')
+        titulaire_b_birth = self._format_date(p23.get('titulaire_b_birth', '.............................'))
         c.drawString(30*mm, y, f"Titulaire B : Nom : {titulaire_b_nom}    Prénoms : {titulaire_b_prenom}    Date de naissance : {titulaire_b_birth}")
         y -= 8*mm
         
@@ -647,7 +720,7 @@ class AnnexPDFService:
         
         # Fait à / Le
         place = p23.get('place', 'Abidjan')
-        date = p23.get('date', '.............................')
+        date = self._format_date(p23.get('date', '.............................'))
         c.setFont("Helvetica", 9)
         c.drawString(30*mm, y, f"Fait à {place}, le {date}, en deux exemplaires originaux.")
         y -= 12*mm
@@ -799,7 +872,7 @@ class AnnexPDFService:
             
             # Fait à / Le
             place = p26.get('place', '.............................')
-            date = p26.get('date', '.............................')
+            date = self._format_date(p26.get('date', '.............................'))
             c.setFont("Helvetica", 9)
             c.drawString(20*mm, y, f"Fait à {place}, le {date}")
             y -= 20*mm
