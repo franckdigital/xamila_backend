@@ -8,6 +8,8 @@ import logging
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
+from reportlab.lib import colors
+from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfWriter
@@ -26,6 +28,11 @@ class AnnexPDFService:
     def __init__(self):
         self.font_name = "Helvetica"
         self.font_size = 10
+        # Couleurs du design original
+        self.blue_header = HexColor('#1E3A8A')  # Bleu foncé pour les en-têtes
+        self.blue_border = HexColor('#3B82F6')  # Bleu pour les bordures
+        self.gray_bg = HexColor('#F3F4F6')      # Gris clair pour les fonds
+        self.black_text = colors.black
     
     def generate_annexes_pdf(self, aor, annex_data: dict) -> BytesIO:
         """
@@ -171,161 +178,229 @@ class AnnexPDFService:
         return buffer
     
     def _generate_page22(self, aor, annex_data: dict) -> BytesIO:
-        """Génère la page 22 - Formulaire d'ouverture"""
+        """Génère la page 22 - Formulaire d'ouverture avec design exact"""
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         
         p22 = annex_data.get('page22', {})
         
-        # En-tête Annexe 1
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30*mm, height - 20*mm, "Annexe 1 : Formulaire d'ouverture de compte-titres")
+        # Titre centré
+        c.setFont("Helvetica-Bold", 11)
+        title = "Annexe 1 : Formulaire d'ouverture de compte-titres"
+        title_width = c.stringWidth(title, "Helvetica-Bold", 11)
+        c.drawString((width - title_width) / 2, height - 15*mm, title)
         
-        # Note IMPORTANT
-        y = height - 30*mm
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(30*mm, y, "IMPORTANT : En cas de pluralité de titulaires")
-        y -= 4*mm
-        c.setFont("Helvetica", 8)
-        c.drawString(30*mm, y, "(compte joint de titres, compte en indivision ou compte usufrui nue-propriété), merci de photocopier cette")
-        y -= 4*mm
-        c.drawString(30*mm, y, "page en autant d'exemplaires qu'il y a de co-titulaires du compte, de la compléter et de la joindre à votre envoi")
-        y -= 4*mm
-        c.drawString(30*mm, y, "(un exemplaire par co-titulaire accompagné des pièces justificatives).")
+        y = height - 25*mm
         
-        # Numéro de compte-titres
+        # Encadré IMPORTANT avec fond bleu
+        important_box_y = y
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, important_box_y - 15*mm, width - 40*mm, 15*mm, fill=1, stroke=0)
+        
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(22*mm, important_box_y - 5*mm, "IMPORTANT : En cas de pluralité de titulaires (compte joint de titres, compte en indivision ou compte usufrui nue-propriété), merci de photocopier cette")
+        c.drawString(22*mm, important_box_y - 9*mm, "page en autant d'exemplaires qu'il y a de co-titulaires du compte, de la compléter et de la joindre à votre envoi (un exemplaire par co-titulaire accompagné des")
+        c.drawString(22*mm, important_box_y - 13*mm, "pièces justificatives).")
+        
+        c.setFillColor(self.black_text)
+        y = important_box_y - 20*mm
+        
+        # Numéro de compte-titres avec bordure
         y = height - 50*mm
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(1.5)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=0, stroke=1)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        
         c.setFont("Helvetica", 9)
         account_number = p22.get('account_number', '...........................................................................')
-        c.drawString(30*mm, y, f"Numéro de compte-titres : {account_number}")
-        y -= 10*mm
+        c.drawString(22*mm, y, f"Numéro de compte-titres : {account_number}")
+        y -= 15*mm
         
-        # TITULAIRE PERSONNE PHYSIQUE
+        # TITULAIRE PERSONNE PHYSIQUE - Encadré bleu
+        section_start_y = y
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(2)
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=1, stroke=1)
+        
+        c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(70*mm, y, "TITULAIRE PERSONNE PHYSIQUE")
-        y -= 8*mm
+        c.drawString(22*mm, y - 1*mm, "TITULAIRE PERSONNE PHYSIQUE")
         
-        c.setFont("Helvetica", 9)
+        c.setFillColor(self.black_text)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        y -= 12*mm
+        
+        # Cadre avec photo à droite
+        photo_box_x = width - 50*mm
+        photo_box_y = y
+        c.rect(photo_box_x, photo_box_y - 35*mm, 30*mm, 40*mm, fill=0, stroke=1)
+        
+        c.setFont("Helvetica", 8)
         # Civilité
         civility = p22.get('civility', 'Monsieur')
-        c.drawString(30*mm, y, f"Civilité : {civility}")
+        c.drawString(22*mm, y, f"Civilité : {civility}")
         y -= 5*mm
         
         # Nom
         last_name = p22.get('last_name', '................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Nom : {last_name}")
+        c.drawString(22*mm, y, f"Nom : {last_name}")
         y -= 5*mm
         
-        # Nom de jeune fille (pour les femmes mariées)
+        # Nom de jeune fille
         maiden_name = p22.get('maiden_name', '.....................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Nom de jeune fille (pour les femmes mariées) : {maiden_name}")
+        c.drawString(22*mm, y, f"Nom de jeune fille (pour les femmes mariées) : {maiden_name}")
         y -= 5*mm
         
         # Prénom(s)
         first_names = p22.get('first_names', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Prénom(s) : {first_names}")
+        c.drawString(22*mm, y, f"Prénom(s) : {first_names}")
         y -= 5*mm
         
         # Date et lieu de naissance
         birth_date = p22.get('birth_date', '.............................')
         birth_place = p22.get('birth_place', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Date de naissance (jj/mm/aaaa) : {birth_date}    Lieu de naissance : {birth_place}")
+        c.drawString(22*mm, y, f"Date de naissance (jj/mm/aaaa) : {birth_date}    Lieu de naissance : {birth_place}")
         y -= 5*mm
         
         # Nationalité
         nationality = p22.get('nationality', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Nationalité : {nationality}")
+        c.drawString(22*mm, y, f"Nationalité : {nationality}")
         y -= 5*mm
         
         # Type de pièce d'identité
         id_type = p22.get('id_type', '.............................')
         id_number = p22.get('id_number', '.............................')
         id_validity = p22.get('id_validity', '.................................')
-        c.drawString(30*mm, y, f"Type de pièce d'identité : {id_type}  Numéro : {id_number}  Date de validité : {id_validity}")
+        c.drawString(22*mm, y, f"Type de pièce d'identité : {id_type}  Numéro : {id_number}  ...date de validité : {id_validity}")
         y -= 8*mm
         
-        # TITULAIRE PERSONNE MORALE
+        # TITULAIRE PERSONNE MORALE - Encadré bleu
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(2)
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=1, stroke=1)
+        
+        c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(70*mm, y, "TITULAIRE PERSONNE MORALE")
-        y -= 8*mm
+        c.drawString(22*mm, y - 1*mm, "TITULAIRE PERSONNE MORALE")
         
-        c.setFont("Helvetica", 9)
+        c.setFillColor(self.black_text)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        y -= 12*mm
+        
+        c.setFont("Helvetica", 8)
         company_name = p22.get('company_name', '.................................................................................................................................................................')
         rccm_number = p22.get('rccm_number', '.................................')
-        c.drawString(30*mm, y, f"Nom de la société : {company_name}    Numéro RCCM : {rccm_number}")
+        c.drawString(22*mm, y, f"Nom de la société : {company_name}    Numéro RCCM : {rccm_number}")
         y -= 5*mm
         
         # Numéro Compte contribuable
         tax_number = p22.get('tax_number', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Numéro Compte contribuable : {tax_number}")
+        c.drawString(22*mm, y, f"Numéro Compte contribuable : {tax_number}")
         y -= 5*mm
         
-        # Représentée par
-        representative_name = p22.get('representative_name', '.................................................................................................................................................................')
-        representative_first_names = p22.get('representative_first_names', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Représentée par Nom : {representative_name}    Prénom(s) : {representative_first_names}")
+        # Représentant
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(22*mm, y, "Représenté par :")
         y -= 5*mm
         
-        # Date de naissance représentant
+        c.setFont("Helvetica", 8)
+        rep_last_name = p22.get('rep_last_name', '.................................................................................................................................................................')
+        rep_first_names = p22.get('rep_first_names', '.................................................................................................................................................................')
+        c.drawString(22*mm, y, f"Nom : {rep_last_name}    Prénom(s) : {rep_first_names}")
+        y -= 5*mm
+        
+        # Date et lieu de naissance représentant
         rep_birth_date = p22.get('rep_birth_date', '.............................')
         rep_birth_place = p22.get('rep_birth_place', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Date de naissance (jj/mm/aaaa) : {rep_birth_date}    Lieu de naissance : {rep_birth_place}")
+        c.drawString(22*mm, y, f"Date de naissance (jj/mm/aaaa) : {rep_birth_date}    Lieu de naissance : {rep_birth_place}")
         y -= 5*mm
         
-        # Titulaire de la pièce d'identité
+        # Pièce d'identité représentant
         rep_id_type = p22.get('rep_id_type', '.............................')
         rep_id_number = p22.get('rep_id_number', '.............................')
         rep_id_validity = p22.get('rep_id_validity', '.................................')
-        c.drawString(30*mm, y, f"Titulaire de la pièce d'identité : {rep_id_type}  N° : {rep_id_number}  Valide jusqu'au : {rep_id_validity}")
+        c.drawString(22*mm, y, f"Titulaire de la pièce d'identité : {rep_id_type}  N° : {rep_id_number}  Valide jusqu'au : {rep_id_validity}")
         y -= 5*mm
         
         # Nationalité représentant
         rep_nationality = p22.get('rep_nationality', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Nationalité : {rep_nationality}")
+        c.drawString(22*mm, y, f"Nationalité : {rep_nationality}")
         y -= 5*mm
         
         # Fonction
         rep_function = p22.get('rep_function', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Fonction : {rep_function}")
+        c.drawString(22*mm, y, f"Fonction : {rep_function}")
         y -= 8*mm
         
-        # ADRESSE FISCALE DU TITULAIRE
+        # ADRESSE FISCALE DU TITULAIRE - Encadré bleu
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(2)
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=1, stroke=1)
+        
+        c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "ADRESSE FISCALE DU TITULAIRE")
-        y -= 8*mm
+        c.drawString(22*mm, y - 1*mm, "ADRESSE FISCALE DU TITULAIRE")
         
-        c.setFont("Helvetica", 9)
+        c.setFillColor(self.black_text)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        y -= 12*mm
+        
+        c.setFont("Helvetica", 8)
         fiscal_address = p22.get('fiscal_address', '.................................................................................................................................................................')
         fiscal_building = p22.get('fiscal_building', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Résidence, Bâtiment : {fiscal_address}    N° de rue : {fiscal_building}")
+        c.drawString(22*mm, y, f"Résidence, Bâtiment : {fiscal_address}    N° de rue : {fiscal_building}")
         y -= 5*mm
         
         fiscal_postal_code = p22.get('fiscal_postal_code', '.............................')
         fiscal_city = p22.get('fiscal_city', '.................................................................................................................................................................')
         fiscal_country = p22.get('fiscal_country', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Code postal : {fiscal_postal_code}    Ville : {fiscal_city}    Pays : {fiscal_country}")
+        c.drawString(22*mm, y, f"Code postal : {fiscal_postal_code}    Ville : {fiscal_city}    Pays : {fiscal_country}")
         y -= 8*mm
         
-        # ADRESSE POSTALE DU TITULAIRE
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "ADRESSE POSTALE DU TITULAIRE (si différente de l'adresse fiscale)")
-        y -= 8*mm
+        # ADRESSE POSTALE DU TITULAIRE - Encadré bleu
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(2)
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=1, stroke=1)
         
-        c.setFont("Helvetica", 9)
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(22*mm, y - 1*mm, "ADRESSE POSTALE DU TITULAIRE (si différente de l'adresse fiscale)")
+        
+        c.setFillColor(self.black_text)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        y -= 12*mm
+        
+        c.setFont("Helvetica", 8)
         postal_address = p22.get('postal_address', '.................................................................................................................................................................')
         postal_building = p22.get('postal_building', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Résidence, Bâtiment : {postal_address}    N° de rue : {postal_building}")
+        c.drawString(22*mm, y, f"Résidence, Bâtiment : {postal_address}    N° de rue : {postal_building}")
         y -= 5*mm
         
         postal_code = p22.get('postal_code', '.............................')
         postal_city = p22.get('postal_city', '.................................................................................................................................................................')
         postal_country = p22.get('postal_country', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Code postal : {postal_code}    Ville : {postal_city}    Pays : {postal_country}")
+        c.drawString(22*mm, y, f"Code postal : {postal_code}    Ville : {postal_city}    Pays : {postal_country}")
         y -= 8*mm
         
-        # Cases à cocher
-        c.setFont("Helvetica", 9)
+        # Cases à cocher avec bordure
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(1)
+        c.rect(20*mm, y - 8*mm, width - 40*mm, 10*mm, fill=0, stroke=1)
+        c.setStrokeColor(self.black_text)
+        
+        c.setFont("Helvetica", 8)
         is_fiscal_resident = p22.get('is_fiscal_resident', False)
         is_cedeao_member = p22.get('is_cedeao_member', False)
         is_outside_cedeao = p22.get('is_outside_cedeao', False)
@@ -334,22 +409,32 @@ class AnnexPDFService:
         marker_cedeao = "☑" if is_cedeao_member else "☐"
         marker_outside = "☑" if is_outside_cedeao else "☐"
         
-        c.drawString(30*mm, y, f"{marker_fiscal} Résident fiscal ivoirien    {marker_cedeao} Membre de la CEDEAO    {marker_outside} Pays hors CEDEAO")
-        y -= 8*mm
+        c.drawString(22*mm, y - 3*mm, f"{marker_fiscal} Résident fiscal ivoirien    {marker_cedeao} Membre de la CEDEAO    {marker_outside} Pays hors CEDEAO")
+        y -= 12*mm
         
-        # COORDONNÉES DU TITULAIRE
+        # COORDONNÉES DU TITULAIRE - Encadré bleu
+        c.setStrokeColor(self.blue_border)
+        c.setLineWidth(2)
+        c.setFillColor(self.blue_header)
+        c.rect(20*mm, y - 5*mm, width - 40*mm, 8*mm, fill=1, stroke=1)
+        
+        c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "COORDONNÉES DU TITULAIRE")
-        y -= 8*mm
+        c.drawString(22*mm, y - 1*mm, "COORDONNÉES DU TITULAIRE")
         
-        c.setFont("Helvetica", 9)
+        c.setFillColor(self.black_text)
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        y -= 12*mm
+        
+        c.setFont("Helvetica", 8)
         phone_portable = p22.get('phone_portable', '.................................................................................................................................................................')
         phone_domicile = p22.get('phone_domicile', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Tél Portable : {phone_portable}    Tél Domicile : {phone_domicile}")
+        c.drawString(22*mm, y, f"Tél Portable : {phone_portable}    Tél Domicile : {phone_domicile}")
         y -= 5*mm
         
         email = p22.get('email', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Email : {email}")
+        c.drawString(22*mm, y, f"Email : {email}")
         
         c.showPage()
         c.save()
@@ -364,93 +449,100 @@ class AnnexPDFService:
         
         p23 = annex_data.get('page23', {})
         
-        # Continuation de l'Annexe 1
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30*mm, height - 20*mm, "Annexe 1 : Formulaire d'ouverture de compte-titres (suite)")
+        # Titre centré
+        c.setFont("Helvetica-Bold", 11)
+        title = "CARACTÉRISTIQUES DU COMPTE (cocher la case correspondante)"
+        title_width = c.stringWidth(title, "Helvetica-Bold", 11)
+        c.drawString((width - title_width) / 2, height - 15*mm, title)
         
-        y = height - 35*mm
+        y = height - 30*mm
         
-        # CARACTÉRISTIQUES DU COMPTE
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "CARACTÉRISTIQUES DU COMPTE")
-        y -= 8*mm
+        # Section avec fond gris clair
+        section_height = 70*mm
+        c.setFillColor(self.gray_bg)
+        c.rect(20*mm, y - section_height, width - 40*mm, section_height, fill=1, stroke=0)
         
+        # Bordure noire autour de la section
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1.5)
+        c.rect(20*mm, y - section_height, width - 40*mm, section_height, fill=0, stroke=1)
+        
+        c.setFillColor(self.black_text)
         c.setFont("Helvetica", 9)
         
-        # Type de compte
+        y -= 10*mm
+        
+        # Type de compte avec cases à cocher
         account_individual = p23.get('account_individual', True)
         account_joint = p23.get('account_joint', False)
         account_indivision = p23.get('account_indivision', False)
         account_usufruit = p23.get('account_usufruit', False)
         
         marker = "☑" if account_individual else "☐"
-        c.drawString(30*mm, y, f"{marker} Compte individuel pleine propriété")
-        y -= 5*mm
+        c.drawString(25*mm, y, f"{marker} Compte individuel pleine propriété (cas général)")
+        y -= 8*mm
+        
+        # Ligne de séparation
+        c.setLineWidth(0.5)
+        c.line(25*mm, y + 2*mm, width - 25*mm, y + 2*mm)
+        y -= 3*mm
         
         marker = "☑" if account_joint else "☐"
-        c.drawString(30*mm, y, f"{marker} Compte joint de Titres")
+        c.drawString(25*mm, y, f"{marker} Compte joint de Titres")
         y -= 5*mm
         
-        marker = "☑" if account_indivision else "☐"
-        indivision_names = p23.get('indivision_names', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"{marker} Compte en indivision entre : {indivision_names}")
-        y -= 5*mm
-        
-        marker = "☑" if account_usufruit else "☐"
-        usufruit_name = p23.get('usufruit_name', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"{marker} Compte usufrui nue-propriété Usufruitier : {usufruit_name}")
-        y -= 5*mm
-        
-        nue_propriete_name = p23.get('nue_propriete_name', '.................................................................................................................................................................')
-        c.drawString(40*mm, y, f"Nu-propriétaire : {nue_propriete_name}")
-        y -= 8*mm
-        
-        # PERSONNE DÉSIGNÉE
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "PERSONNE DÉSIGNÉE POUR RECEVOIR LES CORRESPONDANCES")
-        y -= 8*mm
-        
-        c.setFont("Helvetica", 9)
-        designated_person_name = p23.get('designated_person_name', '.................................................................................................................................................................')
-        designated_person_first_names = p23.get('designated_person_first_names', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Nom : {designated_person_name}    Prénom(s) : {designated_person_first_names}")
-        y -= 5*mm
-        
-        designated_person_address = p23.get('designated_person_address', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Adresse : {designated_person_address}")
-        y -= 5*mm
-        
-        designated_person_phone = p23.get('designated_person_phone', '.................................................................................................................................................................')
-        designated_person_email = p23.get('designated_person_email', '.................................................................................................................................................................')
-        c.drawString(30*mm, y, f"Téléphone : {designated_person_phone}    Email : {designated_person_email}")
-        y -= 8*mm
-        
-        # MODALITÉS DE FONCTIONNEMENT DU COMPTE
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(30*mm, y, "MODALITÉS DE FONCTIONNEMENT DU COMPTE")
-        y -= 8*mm
-        
-        c.setFont("Helvetica", 9)
-        c.drawString(30*mm, y, "En cas de pluralité de titulaires, le compte fonctionne sous la signature :")
-        y -= 5*mm
-        
-        signature_conjointe = p23.get('signature_conjointe', False)
-        signature_separee = p23.get('signature_separee', False)
-        
-        marker_conjointe = "☑" if signature_conjointe else "☐"
-        marker_separee = "☑" if signature_separee else "☐"
-        
-        c.drawString(30*mm, y, f"{marker_conjointe} Conjointe de tous les titulaires    {marker_separee} Séparée de chacun des titulaires")
-        y -= 8*mm
-        
-        # DÉCLARATION
+        # Titulaires A et B
         c.setFont("Helvetica", 8)
-        c.drawString(30*mm, y, "Par le présent, je déclare (nous déclarons) avoir pris connaissance et adhérer à l'intégralité des dispositions de la convention")
-        y -= 4*mm
-        c.drawString(30*mm, y, "d'ouverture et de tenue de compte-titres ci-annexée et m'engage (nous nous engageons) à respecter les obligations qui en découlent.")
-        y -= 4*mm
-        c.drawString(30*mm, y, "Je reconnais (nous reconnaissons) avoir reçu un exemplaire de ladite convention.")
+        titulaire_a_nom = p23.get('titulaire_a_nom', '.............................')
+        titulaire_a_prenom = p23.get('titulaire_a_prenom', '.............................')
+        titulaire_a_birth = p23.get('titulaire_a_birth', '.............................')
+        c.drawString(30*mm, y, f"Titulaire A : Nom : {titulaire_a_nom}    Prénoms : {titulaire_a_prenom}    Date de naissance : {titulaire_a_birth}")
+        y -= 5*mm
+        
+        titulaire_b_nom = p23.get('titulaire_b_nom', '.............................')
+        titulaire_b_prenom = p23.get('titulaire_b_prenom', '.............................')
+        titulaire_b_birth = p23.get('titulaire_b_birth', '.............................')
+        c.drawString(30*mm, y, f"Titulaire B : Nom : {titulaire_b_nom}    Prénoms : {titulaire_b_prenom}    Date de naissance : {titulaire_b_birth}")
         y -= 8*mm
+        
+        # Ligne de séparation
+        c.line(25*mm, y + 2*mm, width - 25*mm, y + 2*mm)
+        y -= 3*mm
+        
+        c.setFont("Helvetica", 9)
+        marker = "☑" if account_indivision else "☐"
+        c.drawString(25*mm, y, f"{marker} Compte en indivision entre:")
+        y -= 5*mm
+        
+        # Titulaires A, B, C, D pour indivision
+        c.setFont("Helvetica", 8)
+        for letter in ['A', 'B', 'C', 'D']:
+            nom_key = f'titulaire_{letter.lower()}_nom'
+            prenom_key = f'titulaire_{letter.lower()}_prenom'
+            nom = p23.get(nom_key, '.............................')
+            prenom = p23.get(prenom_key, '.............................')
+            c.drawString(30*mm, y, f"Titulaire {letter} : Nom : {nom}    Prénoms : {prenom}")
+            y -= 4*mm
+        
+        y -= 3*mm
+        c.setFont("Helvetica", 8)
+        designated_person = p23.get('designated_person_name', '.................................................................................................................................................................')
+        c.drawString(25*mm, y, f"Nom et prénoms de la personne désignée pour faire fonctionner le compte : {designated_person}")
+        y -= 8*mm
+        
+        # Déclaration avec bordure
+        y -= 5*mm
+        c.setStrokeColor(self.black_text)
+        c.setLineWidth(1)
+        declaration_height = 25*mm
+        c.rect(20*mm, y - declaration_height, width - 40*mm, declaration_height, fill=0, stroke=1)
+        
+        y -= 5*mm
+        c.setFont("Helvetica", 8)
+        c.drawString(22*mm, y, "Par le présent, je déclare (nous déclarons) avoir pris connaissance et adhérer à l'intégralité des dispositions de la convention")
+        y -= 4*mm
+        c.drawString(22*mm, y, "d'ouverture de compte laquelle se compose du présent formulaire, ainsi que des conditions générales.")
+        y -= 12*mm
         
         # Fait à / Le
         place = p23.get('place', 'Abidjan')
@@ -488,11 +580,13 @@ class AnnexPDFService:
         
         p26 = annex_data.get('page26', {})
         
-        # Titre Annexe 4
+        # Titre centré
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(30*mm, height - 20*mm, "Annexe 4 : Procuration")
+        title = "Annexe 4 : Formulaire de Procuration"
+        title_width = c.stringWidth(title, "Helvetica-Bold", 12)
+        c.drawString((width - title_width) / 2, height - 20*mm, title)
         
-        y = height - 50*mm
+        y = height - 40*mm
         
         # Vérifier si procuration
         has_procuration = p26.get('has_procuration', False)
@@ -501,49 +595,118 @@ class AnnexPDFService:
             c.setFont("Helvetica", 10)
             c.drawString(30*mm, y, "Pas de procuration demandée")
         else:
-            # Mandant
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(30*mm, y, "JE SOUSSIGNÉ(E) - MANDANT")
-            y -= 8*mm
-            
+            # Section Je, soussigné(e)
             c.setFont("Helvetica", 10)
-            mandant_name = p26.get('mandant_name', '')
-            mandant_first_names = p26.get('mandant_first_names', '')
-            mandant_address = p26.get('mandant_address', '')
-            
-            c.drawString(30*mm, y, f"Nom: {mandant_name}")
-            y -= 6*mm
-            c.drawString(30*mm, y, f"Prénoms: {mandant_first_names}")
-            y -= 6*mm
-            c.drawString(30*mm, y, f"Adresse: {mandant_address}")
+            c.drawString(20*mm, y, "Je, soussigné(e) :")
             y -= 10*mm
             
-            # Mandataire
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(30*mm, y, "DONNE POUVOIR À - MANDATAIRE")
+            # Civilité
+            mandant_civility = p26.get('mandant_civility', 'Madame, Mademoiselle, Monsieur')
+            c.setFont("Helvetica", 9)
+            c.drawString(25*mm, y, f"Civilité : {mandant_civility}")
+            y -= 6*mm
+            
+            # Nom
+            mandant_name = p26.get('mandant_name', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Nom : {mandant_name}")
+            y -= 6*mm
+            
+            # Prénom(s)
+            mandant_first_names = p26.get('mandant_first_names', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Prénom(s) : {mandant_first_names}")
+            y -= 6*mm
+            
+            # Adresse
+            mandant_address = p26.get('mandant_address', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Adresse : {mandant_address}")
+            y -= 6*mm
+            
+            # Code Postal, Ville, Pays
+            mandant_postal = p26.get('mandant_postal', '.............................')
+            mandant_city = p26.get('mandant_city', '.............................')
+            mandant_country = p26.get('mandant_country', '.............................')
+            c.drawString(25*mm, y, f"Code Postal : {mandant_postal}    Ville : {mandant_city}    Pays : {mandant_country}")
             y -= 8*mm
             
-            c.setFont("Helvetica", 10)
-            mandataire_name = p26.get('mandataire_name', '')
-            mandataire_first_names = p26.get('mandataire_first_names', '')
-            mandataire_address = p26.get('mandataire_address', '')
-            
-            c.drawString(30*mm, y, f"Nom: {mandataire_name}")
-            y -= 6*mm
-            c.drawString(30*mm, y, f"Prénoms: {mandataire_first_names}")
-            y -= 6*mm
-            c.drawString(30*mm, y, f"Adresse: {mandataire_address}")
+            # Titulaire du compte-titres
+            account_number = p26.get('account_number', '.............................')
+            sgi_name = p26.get('sgi_name', 'GEK CAPITAL')
+            c.drawString(20*mm, y, f"Titulaire du compte-titres n° : {account_number} ouvert(s) dans les livres de {sgi_name}")
             y -= 10*mm
             
-            # Signatures
+            # donne pouvoir à
             c.setFont("Helvetica-Bold", 10)
-            c.drawString(30*mm, y, "Signature du mandant")
-            c.drawString(120*mm, y, "Signature du mandataire")
+            c.drawString(20*mm, y, "donne pouvoir à :")
+            y -= 10*mm
+            
+            # Civilité mandataire
+            mandataire_civility = p26.get('mandataire_civility', 'Madame, Mademoiselle, Monsieur')
+            c.setFont("Helvetica", 9)
+            c.drawString(25*mm, y, f"Civilité : {mandataire_civility}")
+            y -= 6*mm
+            
+            # Nom mandataire
+            mandataire_name = p26.get('mandataire_name', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Nom : {mandataire_name}")
+            y -= 6*mm
+            
+            # Prénom(s) mandataire
+            mandataire_first_names = p26.get('mandataire_first_names', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Prénom(s) : {mandataire_first_names}")
+            y -= 6*mm
+            
+            # Adresse mandataire
+            mandataire_address = p26.get('mandataire_address', '.................................................................................................................................................................')
+            c.drawString(25*mm, y, f"Adresse : {mandataire_address}")
+            y -= 6*mm
+            
+            # Code Postal mandataire
+            mandataire_postal = p26.get('mandataire_postal', '.............................')
+            mandataire_city = p26.get('mandataire_city', '.............................')
+            mandataire_country = p26.get('mandataire_country', '.............................')
+            c.drawString(25*mm, y, f"Code Postal : {mandataire_postal}    Ville : {mandataire_city}    Pays : {mandataire_country}")
+            y -= 10*mm
+            
+            # Texte de la procuration
+            c.setFont("Helvetica", 9)
+            c.drawString(20*mm, y, "dont la signature est reprise ci-dessous, afin d'effectuer en mon nom et pour mon compte toutes les opérations sur titres,")
+            y -= 5*mm
+            c.drawString(20*mm, y, "notamment pour procéder à l'achat et à la vente de titres.")
+            y -= 10*mm
+            
+            c.drawString(20*mm, y, f"Par la présente, j'autorise donc {sgi_name}, à procéder à ces opérations conformément aux conditions générales de la")
+            y -= 5*mm
+            c.drawString(20*mm, y, "convention d'ouverture de compte signée par mes soins.")
+            y -= 10*mm
+            
+            c.drawString(20*mm, y, f"La présente procuration restera valable jusqu'à dénonciation adressée par mes soins par lettre simple à {sgi_name},")
+            y -= 5*mm
+            c.drawString(20*mm, y, "sauf à considérer les dispositions légales en vigueur.")
+            y -= 15*mm
+            
+            # Fait à / Le
+            place = p26.get('place', '.............................')
+            date = p26.get('date', '.............................')
+            c.setFont("Helvetica", 9)
+            c.drawString(20*mm, y, f"Fait à {place}, le {date}")
+            y -= 20*mm
+            
+            # Signatures côte à côte
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(30*mm, y, "Signature du mandant, précédée de la")
+            c.drawString(120*mm, y, "Signature de la mandataire précédée de la")
             y -= 5*mm
             
-            c.setFont("Helvetica", 8)
-            c.drawString(30*mm, y, '"Bon pour pouvoir"')
-            c.drawString(120*mm, y, '"Bon pour accord"')
+            c.setFont("Helvetica-Oblique", 9)
+            c.drawString(30*mm, y, 'mention manuscrite "Bon pour pouvoir"')
+            c.drawString(120*mm, y, 'mention manuscrite "Bon pour accord"')
+            y -= 15*mm
+            
+            # Rectangles pour signatures
+            c.setStrokeColor(self.black_text)
+            c.setLineWidth(1)
+            c.rect(30*mm, y - 20*mm, 50*mm, 25*mm, fill=0, stroke=1)
+            c.rect(120*mm, y - 20*mm, 50*mm, 25*mm, fill=0, stroke=1)
         
         c.showPage()
         c.save()
