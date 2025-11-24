@@ -57,32 +57,10 @@
     </ul>
   </div>
 
-  <div class="page-break"></div>
-
   <div class="section">
-    <h3>Annexe 1 — Formulaire d’ouverture (synthèse)</h3>
-    <table>
-      <tr><th>Nom complet</th><td>{{ aor.full_name }}</td></tr>
-      <tr><th>Email</th><td>{{ aor.email }}</td></tr>
-      <tr><th>Téléphone</th><td>{{ aor.phone }}</td></tr>
-      <tr><th>Adresse (résidence)</th><td>{{ aor.country_of_residence }}</td></tr>
-      <tr><th>Banques avec compte courant</th><td>{% if aor.customer_banks_current_account %}{{ aor.customer_banks_current_account|join:", " }}{% endif %}</td></tr>
-      <tr><th>Sources de revenus</th><td>{{ aor.sources_of_income }}</td></tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <h3>Annexe 2 — Conditions tarifaires (extrait)</h3>
-    <div class="small muted">Renseigner via SGIAccountTerms (ou référencer la grille SGI).</div>
-  </div>
-
-  <div class="section">
-    <h3>Annexe 3 — Contacts</h3>
-    <p>{{ sgi.name }} — {{ sgi.address }} — Manager: {{ sgi.manager_name }} ({{ sgi.manager_email }})</p>
-  </div>
-
-  <div class="section">
-    <p class="small muted">Ce document reprend la structure du modèle GEK CAPITAL et est auto-généré pour la mise en relation.</p>
+    <p class="small muted" style="margin-top: 40px; text-align: center;">
+      Les annexes pré-remplies (pages 21, 22, 23, 26) suivent ce document.
+    </p>
   </div>
 </body>
 </html>
