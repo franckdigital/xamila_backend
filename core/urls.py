@@ -110,6 +110,7 @@ urlpatterns = [
     path('account-opening/contract/preview/', views.ContractPDFPreviewView.as_view(), name='contract-pdf-preview'),
     path('download-commercial-contract/', views.DownloadCommercialContractView.as_view(), name='download-commercial-contract'),
     path('download-annexes-pdf/', views.DownloadAnnexesPDFView.as_view(), name='download-annexes-pdf'),
+    path('save-annex-signatures/', views.SaveAnnexSignaturesView.as_view(), name='save-annex-signatures'),
 
     # === ENDPOINTS MANAGER DASHBOARD ===
     path('manager/clients/', views_mgr.ManagerClientsView.as_view(), name='manager-clients'),

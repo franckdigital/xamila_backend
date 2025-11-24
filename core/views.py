@@ -1176,6 +1176,60 @@ class DownloadCommercialContractView(APIView):
             )
 
 
+class SaveAnnexSignaturesView(APIView):
+    """
+    Sauvegarde les signatures des annexes dans la base de données.
+    POST /api/save-annex-signatures/
+    Body: { request_id, annex_data: { page21, page22, page23, page26 } }
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        try:
+            request_id = request.data.get('request_id')
+            annex_data = request.data.get('annex_data', {})
+            
+            if not request_id:
+                return Response(
+                    {'error': 'request_id requis'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Récupérer la demande d'ouverture de compte
+            try:
+                aor = AccountOpeningRequest.objects.get(id=request_id)
+            except AccountOpeningRequest.DoesNotExist:
+                return Response(
+                    {'error': 'Demande introuvable'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Mettre à jour les données des annexes
+            if not aor.annex_data:
+                aor.annex_data = {}
+            
+            # Fusionner les nouvelles données avec les anciennes
+            aor.annex_data.update(annex_data)
+            aor.save()
+            
+            logger.info(f"Signatures sauvegardées pour la demande {request_id}")
+            
+            return Response({
+                'success': True,
+                'message': 'Signatures sauvegardées avec succès',
+                'request_id': request_id
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Erreur sauvegarde signatures: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur sauvegarde: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class DownloadAnnexesPDFView(APIView):
     """
     Génère et télécharge un PDF des annexes pré-remplies (pages 21, 22, 23, 26).
