@@ -120,14 +120,18 @@ class AnnexPDFService:
         
         for title, generator_func in pages:
             try:
+                logger.info(f"Génération de {title}...")
                 page_buffer = generator_func(aor, annex_data)
                 if page_buffer:
                     from pypdf import PdfReader
                     reader = PdfReader(page_buffer)
                     for page in reader.pages:
                         writer.add_page(page)
+                    logger.info(f"✅ {title} générée avec succès")
+                else:
+                    logger.warning(f"⚠️ {title} - buffer vide")
             except Exception as e:
-                logger.error(f"Erreur génération {title}: {e}")
+                logger.error(f"❌ Erreur génération {title}: {e}", exc_info=True)
         
         # Écrire le PDF final
         output = BytesIO()
@@ -372,7 +376,7 @@ class AnnexPDFService:
         c.rect(photo_box_x, photo_box_y - 35*mm, 30*mm, 40*mm, fill=0, stroke=1)
         
         # Ajouter la photo si disponible
-        if aor and aor.photo:
+        if aor and hasattr(aor, 'photo') and aor.photo:
             try:
                 # Charger la photo
                 aor.photo.seek(0)
@@ -414,6 +418,7 @@ class AnnexPDFService:
                 logger.info("Photo ajoutée sur l'annexe page 22")
             except Exception as e:
                 logger.warning(f"Impossible d'ajouter la photo sur page 22: {e}")
+                # Continuer sans la photo - le cadre vide sera visible
         
         c.setFont("Helvetica", 8)
         # Civilité
