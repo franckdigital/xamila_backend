@@ -9,7 +9,7 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 import logging
 import os
 
@@ -339,9 +339,9 @@ class ContractPDFPreviewView(APIView):
                 annex_data=annex_data,
             )
 
+            # 1. Générer le contrat vierge (HTML -> PDF)
             pdf_service = ContractPDFService()
             ctx = pdf_service.build_context(aor)
-            # Inject annex overrides for template overlay
             try:
                 ctx['annex'] = annex_data
                 pdf_service._last_ctx = ctx
@@ -349,7 +349,48 @@ class ContractPDFPreviewView(APIView):
                 pass
 
             html = pdf_service.render_html(ctx)
-            return pdf_service.generate_pdf_response(html, filename='contrat_preview.pdf')
+            contract_response = pdf_service.generate_pdf_response(html, filename='contrat_preview.pdf')
+            
+            # 2. Générer les annexes avec ReportLab (si annex_data présent)
+            if annex_data and contract_response.status_code == 200:
+                try:
+                    from pypdf import PdfWriter, PdfReader
+                    from io import BytesIO
+                    
+                    # Générer les annexes
+                    annex_service = AnnexPDFService()
+                    annexes_buffer = annex_service.generate_annexes_pdf(aor, annex_data)
+                    
+                    # Fusionner les PDFs
+                    merger = PdfWriter()
+                    
+                    # Ajouter le contrat vierge
+                    contract_pdf = PdfReader(BytesIO(contract_response.content))
+                    for page in contract_pdf.pages:
+                        merger.add_page(page)
+                    
+                    # Ajouter les annexes
+                    annexes_buffer.seek(0)
+                    annexes_pdf = PdfReader(annexes_buffer)
+                    for page in annexes_pdf.pages:
+                        merger.add_page(page)
+                    
+                    # Créer le PDF fusionné
+                    merged_buffer = BytesIO()
+                    merger.write(merged_buffer)
+                    merged_buffer.seek(0)
+                    
+                    # Retourner le PDF complet
+                    response = HttpResponse(merged_buffer.read(), content_type='application/pdf')
+                    response['Content-Disposition'] = 'attachment; filename="contrat_complet_preview.pdf"'
+                    return response
+                    
+                except Exception as e:
+                    logger.error(f"Erreur fusion PDFs: {e}", exc_info=True)
+                    # En cas d'erreur, retourner juste le contrat vierge
+                    return contract_response
+            
+            return contract_response
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
