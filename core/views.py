@@ -702,7 +702,7 @@ class AccountOpeningRequestCreateView(APIView):
                 annex_data = req_obj.annex_data or {}
                 
                 if annex_data:
-                    annexes_buffer = annex_service.generate_annex_pdf(req_obj, annex_data)
+                    annexes_buffer = annex_service.generate_annexes_pdf(req_obj, annex_data)
                     annexes_pdf_bytes = annexes_buffer.read()
                     annexes_buffer.seek(0)
                     logger.info(f"Annexes PDF générées: {len(annexes_pdf_bytes)} bytes")
@@ -1218,7 +1218,7 @@ class DownloadAnnexesPDFView(APIView):
             
             # Générer le PDF des annexes
             annex_service = AnnexPDFService()
-            pdf_buffer = annex_service.generate_annex_pdf(fake_aor, annex_data)
+            pdf_buffer = annex_service.generate_annexes_pdf(fake_aor, annex_data)
             
             # Préparer le nom du fichier
             client_name = annex_data.get('page22', {}).get('nom_complet', 'Client').replace(' ', '_')
