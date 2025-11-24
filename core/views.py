@@ -715,15 +715,29 @@ class AccountOpeningRequestCreateView(APIView):
             annexes_pdf_bytes = None
             
             try:
-                # 1. Générer le contrat vierge (PDF statique de la SGI)
-                pdf_service = ContractPDFService()
-                ctx = pdf_service.build_context(req_obj)
-                html = pdf_service.render_html(ctx)
-                contract_response = pdf_service.generate_pdf_response(html)
+                # 1. Charger le contrat vierge commercial (PDF statique de la SGI)
+                import os
+                from django.conf import settings
                 
-                if contract_response.status_code == 200:
-                    contract_pdf_bytes = contract_response.content
-                    logger.info(f"Contrat PDF généré: {len(contract_pdf_bytes)} bytes")
+                # Déterminer le fichier de contrat vierge selon la SGI
+                if req_obj.sgi and req_obj.sgi.name:
+                    sgi_name = req_obj.sgi.name.upper()
+                    if 'NSIA' in sgi_name:
+                        contract_filename = 'NSIA_Convention_Compte_Titres.pdf'
+                    elif 'GEK' in sgi_name:
+                        contract_filename = 'GEK --Convention commerciale VF 2025.pdf'
+                    else:
+                        # Par défaut, utiliser NSIA
+                        contract_filename = 'NSIA_Convention_Compte_Titres.pdf'
+                else:
+                    contract_filename = 'NSIA_Convention_Compte_Titres.pdf'
+                
+                contract_path = os.path.join(settings.BASE_DIR, 'contracts', contract_filename)
+                
+                if os.path.exists(contract_path):
+                    with open(contract_path, 'rb') as f:
+                        contract_pdf_bytes = f.read()
+                    logger.info(f"Contrat vierge chargé: {contract_filename} ({len(contract_pdf_bytes)} bytes)")
                     
                     # Sauvegarder le contrat en base de données
                     req_obj.contract_pdf.save(
@@ -732,10 +746,10 @@ class AccountOpeningRequestCreateView(APIView):
                         save=False
                     )
                 else:
-                    logger.warning(f"Échec génération contrat PDF: status {contract_response.status_code}")
+                    logger.warning(f"Contrat vierge introuvable: {contract_path}")
                     
             except Exception as e:
-                logger.error(f"Erreur génération contrat PDF: {e}", exc_info=True)
+                logger.error(f"Erreur chargement contrat vierge: {e}", exc_info=True)
             
             try:
                 # 2. Générer les annexes pré-remplies
