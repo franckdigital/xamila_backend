@@ -378,24 +378,52 @@ class AnnexPDFService:
         # Ajouter la photo si disponible
         logger.info(f"Vérification photo - aor: {aor is not None}, hasattr photo: {hasattr(aor, 'photo') if aor else False}, photo value: {aor.photo if (aor and hasattr(aor, 'photo')) else 'N/A'}")
         
+        # Essayer d'abord de charger depuis le fichier uploadé
+        photo_img = None
+        photo_source = None
+        
         if aor and hasattr(aor, 'photo') and aor.photo:
             try:
-                logger.info(f"Tentative d'ajout de la photo: {aor.photo.name if hasattr(aor.photo, 'name') else 'photo sans nom'}")
-                logger.info(f"Photo path: {aor.photo.path if hasattr(aor.photo, 'path') else 'pas de path'}")
-                logger.info(f"Photo size: {aor.photo.size if hasattr(aor.photo, 'size') else 'pas de size'}")
-                
-                # Vérifier si le fichier existe et est accessible
-                if hasattr(aor.photo, 'path'):
-                    file_exists = os.path.exists(aor.photo.path)
-                    logger.info(f"Fichier existe: {file_exists}")
-                    if not file_exists:
-                        logger.warning(f"Fichier photo introuvable: {aor.photo.path}")
-                        raise FileNotFoundError(f"Photo file not found: {aor.photo.path}")
-                
-                # Charger la photo
+                logger.info(f"Tentative de chargement depuis fichier: {aor.photo.name}")
                 aor.photo.seek(0)
                 photo_img = Image.open(aor.photo)
-                logger.info(f"Photo chargée: {photo_img.size[0]}x{photo_img.size[1]} pixels, format: {photo_img.format}")
+                photo_source = "file"
+                logger.info(f"✅ Photo chargée depuis fichier: {photo_img.size[0]}x{photo_img.size[1]} pixels")
+            except Exception as e:
+                logger.warning(f"Impossible de charger depuis fichier: {e}")
+        
+        # Si pas de photo depuis fichier, essayer depuis base64 dans annex_data
+        if not photo_img and annex_data:
+            try:
+                # Chercher la photo base64 dans annex_data
+                photo_base64 = None
+                
+                # Vérifier dans page22
+                if 'page22' in annex_data and 'photo_base64' in annex_data['page22']:
+                    photo_base64 = annex_data['page22']['photo_base64']
+                # Vérifier à la racine
+                elif 'photo_base64' in annex_data:
+                    photo_base64 = annex_data['photo_base64']
+                
+                if photo_base64:
+                    logger.info("Tentative de chargement depuis base64...")
+                    # Supprimer le préfixe data:image si présent
+                    if ',' in photo_base64:
+                        photo_base64 = photo_base64.split(',', 1)[1]
+                    
+                    # Décoder le base64
+                    import base64
+                    photo_bytes = base64.b64decode(photo_base64)
+                    photo_buffer = BytesIO(photo_bytes)
+                    photo_img = Image.open(photo_buffer)
+                    photo_source = "base64"
+                    logger.info(f"✅ Photo chargée depuis base64: {photo_img.size[0]}x{photo_img.size[1]} pixels")
+            except Exception as e:
+                logger.warning(f"Impossible de charger depuis base64: {e}")
+        
+        if photo_img:
+            try:
+                logger.info(f"Ajout de la photo sur page 22 (source: {photo_source})")
                 
                 # Calculer les dimensions pour ajuster dans le cadre (30mm x 40mm)
                 photo_width_mm = 28  # Légère marge
@@ -426,8 +454,11 @@ class AnnexPDFService:
                 photo_y = photo_box_y - 35*mm + (40*mm - final_height) / 2
                 
                 # Créer un ImageReader depuis PIL Image
-                aor.photo.seek(0)
-                photo_reader = ImageReader(aor.photo)
+                # Convertir PIL Image en buffer pour ImageReader
+                img_buffer = BytesIO()
+                photo_img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                photo_reader = ImageReader(img_buffer)
                 
                 # Dessiner la photo
                 c.drawImage(photo_reader, photo_x, photo_y, width=final_width, height=final_height, preserveAspectRatio=True)
